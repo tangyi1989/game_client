@@ -2,7 +2,7 @@
 #!/usr/bin/env python
 
 import zlib
-import struct
+import struct   
 try:
     from CStringIO import CStringIO as StringIO
 except:
@@ -17,7 +17,7 @@ class Fields(object):
         # 进行这个调用来避免调用被重写的__setattr__
         super(Fields, self).__setattr__("__self_fields__",
                                         self.__fields__.copy())
-        self.update_fileds(**fields)
+        self.update_fields(**fields)
 
     def __repr__(self):
         return str(self.__self_fields__)
@@ -34,8 +34,11 @@ class Fields(object):
 
         return self.__self_fields__[key]
 
-    def update_fileds(self, **fields):
+    def update_fields(self, **fields):
         self.__self_fields__.update(**fields)
+
+    def get_fields(self):
+        return self.__self_fields__
 
 
 class MCM(Fields):
@@ -61,15 +64,16 @@ class MCM(Fields):
 
 
 class Tile(Fields):
+
     __fields__ = {
-        "reversed": None,
-        "arena": None,
-        "sell": None,
-        "all_safe": None,
-        "safe": None,
-        "run": None,
-        "alpha": None,
-        "exist": None,
+        "reversed": False,
+        "arena": False,
+        "sell": False,
+        "all_safe": False,
+        "safe": False,
+        "run": False,
+        "alpha": False,
+        "exist": False,
     }
 
     @classmethod
@@ -78,7 +82,7 @@ class Tile(Fields):
             return ((byteval & (1 << idx)) != 0)
 
         tile = cls()
-        tile.update_fileds(
+        tile.update_fields(
             exist=get_bit(byteval, 0),
             alpha=get_bit(byteval, 1),
             run=get_bit(byteval, 2),
@@ -91,6 +95,24 @@ class Tile(Fields):
 
         return tile
 
+    def to_byte(self):
+        bits = (self.exist,
+                self.alpha,
+                self.run,
+                self.safe,
+                self.all_safe,
+                self.sell,
+                self.arena,
+                self.reversed)
+
+        byteval, pos = 0, 0
+        for bit in bits:
+            bitval = 1 if bit else 0
+            byteval += bitval << pos
+            pos += 1
+
+        return byteval
+
 
 class Element(Fields):
     __fields__ = {
@@ -99,7 +121,7 @@ class Element(Fields):
         "index_ty": None,
         "type": None,
         "data_length": None,
-        "data": None
+        "data": ''
     }
 
 
@@ -117,8 +139,12 @@ class JumpPoint(Fields):
         "min_level": None,
         "max_level": None,
         "data_length": None,
-        "data": None
+        "data": ''
     }
+
+
+class FieldPackError(Exception):
+    pass
 
 
 class MCMSerialize(object):
@@ -165,28 +191,55 @@ class MCMSerialize(object):
 
     def parse_fields(self, fields_stream, fields_desc):
         """ 转换流中的字段 """
-        fileds = {}
 
-        for field in fields_desc:
-            filed_name, unpack_type, filed_length = field[:3]
-            filed_data = fields_stream.read(filed_length)
+        fields = {}
 
-            if len(field) > 3:
-                convert_option = field[3]
-                if convert_option == "string":
-                    value = filed_data
+        for field_desc in fields_desc:
+            field_name, pack_type, field_length = field_desc[:3]
+            field_data = fields_stream.read(field_length)
+
+            if len(field_desc) > 3:
+                convert_option = field_desc[3]
+                if convert_option == "raw":
+                    value = field_data
                 elif convert_option == "gb2312":
-                    value = filed_data.decode('gb2312')
-            elif len(field) == 3:
-                unpacked = struct.unpack(unpack_type, filed_data)
+                    value = field_data.decode('gb2312')
+            elif len(field_desc) == 3:
+                unpacked = struct.unpack(pack_type, field_data)
                 value = unpacked[0] if len(unpacked) == 1 else unpacked
 
-            fileds.setdefault(filed_name, value)
+            fields.setdefault(field_name, value)
 
-        return fileds
+        return fields
 
-    def read_file(self, file_path):
+    def dump_fields(self, fields_stream, fields, fields_desc):
+        """ 将字段按照字段描述写入流中 """
+
+        for field_desc in fields_desc:
+            field_name, pack_type, field_length = field_desc[:3]
+
+            if not fields.has_key(field_name):
+                raise AttributeError
+
+            value = fields.get(field_name, '')
+            if len(field_desc) > 3:
+                convert_option = field_desc[3]
+                if convert_option == "gb2312":
+                    field_data = value.encode("gb2312")
+                    field_data = struct.pack('%ss' % field_length, field_data)
+            else:
+                field_data = struct.pack(pack_type, value)
+
+            if len(field_data) != field_length:
+                raise FieldPackError
+
+            fields_stream.write(field_data)
+
+        return fields_stream
+
+    def read_from_file(self, file_path):
         """ 读取并解析mcm文件 """
+
         with open(file_path, 'rb') as f:
             compressed_bin = f.read()
 
@@ -197,9 +250,9 @@ class MCMSerialize(object):
 
         # 读取Header部分
         header_stream = StringIO(mcm_stream.read(104))
-        header_fileds = self.parse_fields(
+        header_fields = self.parse_fields(
             header_stream, self.header_fields_desc)
-        mcm.update_fileds(**header_fileds)
+        mcm.update_fields(**header_fields)
 
         # 读取tiles部分
         tiles = []
@@ -224,9 +277,11 @@ class MCMSerialize(object):
                 element_header_stream,
                 self.element_header_fields_desc)
 
-            element.update_fileds(**element_fields)
+            element.update_fields(**element_fields)
             if element.data_length > 0:
                 element.data = mcm_stream.read(element.data_length)
+            else:
+                element.data = ''
 
             mcm.elements.append(element)
 
@@ -239,13 +294,65 @@ class MCMSerialize(object):
                 jump_point_header_stream,
                 self.jump_point_header_fields_desc)
 
-            jump_point.update_fileds(**jump_point_fields)
+            jump_point.update_fields(**jump_point_fields)
             if jump_point.data_length > 0:
                 jump_point.data = mcm_stream.read(jump_point.data_length)
 
             mcm.jump_points.append(jump_point)
 
+        return mcm
+
+    def dump_to_stream(self, mcm, mcm_stream):
+        """ 将mcm文件保存在给定的流中 """
+
+        # 写入mcm文件Header部分
+        mcm_fields = mcm.get_fields()
+        self.dump_fields(mcm_stream, mcm_fields, self.header_fields_desc)
+
+        # 写入mcm文件Tiles部分
+        assert len(mcm.tiles) == mcm.tile_row
+        for tile_row in mcm.tiles:
+            assert len(tile_row) == mcm.tile_col
+
+            for tile in tile_row:
+                tile_byte = struct.pack('b', tile.to_byte())
+                mcm_stream.write(tile_byte)
+
+        # 写入mcm文件Elements部分
+        assert len(mcm.elements) == mcm.element_num
+        for element in mcm.elements:
+            element_fields = element.get_fields()
+            self.dump_fields(
+                mcm_stream, element_fields, self.element_header_fields_desc)
+
+            assert len(element.data) == element.data_length
+            mcm_stream.write(element.data)
+
+        # 写入mcm文件的JumpPoint部分
+        assert len(mcm.jump_points) == mcm.jump_point_num
+        for jump_point in mcm.jump_points:
+            jump_point_fields = jump_point.get_fields()
+            self.dump_fields(
+                mcm_stream, jump_point_fields, self.jump_point_header_fields_desc)
+
+            assert len(jump_point.data) == jump_point.data_length
+            mcm_stream.write(jump_point.data)
+
+        return mcm_stream
+
+    def dump_to_file(self, mcm, file_path):
+        """ 将mcm文件保存在给定的文件中 """
+
+        mcm_stream = StringIO()
+        self.dump_to_stream(mcm, mcm_stream)
+
+        mcm_stream.seek(0)
+        compressed_bin = zlib.compress(mcm_stream.read())
+        with open(file_path, 'wb') as f:
+            f.write(compressed_bin)
 
 if __name__ == "__main__":
     file_path = "/home/tang/code/erlang/tang/erl_game_server/resource/map/mcm/105001.mcm"
-    MCMSerialize().read_file(file_path)
+    mcm = MCMSerialize().read_from_file(file_path)
+    MCMSerialize().dump_to_file(mcm, '/tmp/105001.mcm')
+    mcm = MCMSerialize().read_from_file('/tmp/105001.mcm')
