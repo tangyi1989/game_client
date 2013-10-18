@@ -252,7 +252,7 @@ class MapJumpPoint(FieldsClass):
         "data": ''
     }
 
-class MCMSerializer(FieldsSerializer):
+class MapSerializer(FieldsSerializer):
 
     """ Map文件序列化和反序列化 """
 
@@ -410,7 +410,7 @@ class MCMSerializer(FieldsSerializer):
 
 if __name__ == "__main__":
     file_path = "/home/tang/code/erlang/tang/erl_game_server/resource/map/mcm/105001.mcm"
-    map = MCMSerializer().read_from_file(file_path)
-    MCMSerializer().dump_to_file(map, '/tmp/105001.mcm')
-    map = MCMSerializer().read_from_file('/tmp/105001.mcm')
+    map = MapSerializer().read_from_file(file_path)
+    MapSerializer().dump_to_file(map, '/tmp/105001.mcm')
+    map = MapSerializer().read_from_file('/tmp/105001.mcm')
     print map
