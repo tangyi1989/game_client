@@ -10,7 +10,7 @@ except:
 
 """
 读取和保存地图文件，此文件格式和数据结构和《斗破苍穹》的游戏地图一样的，
-请参照具体格式请参照服务端中的地图设计，对mcm文件格式的分析。
+请参照具体格式请参照服务端中的地图设计，对map文件格式的分析。
 
 作者：唐万万
 日期：2013-10-18
@@ -295,57 +295,57 @@ class MCMSerializer(FieldsSerializer):
     ]
 
     def read_from_file(self, file_path):
-        """ 读取并解析mcm文件 """
+        """ 读取并解析map文件 """
 
         with open(file_path, 'rb') as f:
             compressed_bin = f.read()
 
         raw_binary = zlib.decompress(compressed_bin)
-        mcm_stream = StringIO(raw_binary)
+        map_stream = StringIO(raw_binary)
 
-        mcm = Map()
+        map = Map()
 
         # 读取Header部分
-        header_stream = StringIO(mcm_stream.read(104))
+        header_stream = StringIO(map_stream.read(104))
         header_fields = self.parse_fields(
             header_stream, self.header_fields_desc)
-        mcm.update_fields(**header_fields)
+        map.update_fields(**header_fields)
 
         # 读取tiles部分
         tiles = []
-        tile_length = mcm.tile_row * mcm.tile_col
-        tile_stream = StringIO(mcm_stream.read(tile_length))
-        for y in xrange(0, mcm.tile_row):
+        tile_length = map.tile_row * map.tile_col
+        tile_stream = StringIO(map_stream.read(tile_length))
+        for y in xrange(0, map.tile_row):
             tile_row = []
-            for x in xrange(0, mcm.tile_col):
+            for x in xrange(0, map.tile_col):
                 tile_byte = struct.unpack('b', tile_stream.read(1))[0]
                 tile = MapTile.from_byte(tile_byte)
                 tile_row.append(tile)
 
             tiles.append(tile_row)
 
-        mcm.tiles = tiles
+        map.tiles = tiles
 
         # 读取elements部分
-        for i in xrange(0, mcm.element_num):
+        for i in xrange(0, map.element_num):
             element = MapElement()
-            element_header_stream = StringIO(mcm_stream.read(20))
+            element_header_stream = StringIO(map_stream.read(20))
             element_fields = self.parse_fields(
                 element_header_stream,
                 self.element_header_fields_desc)
 
             element.update_fields(**element_fields)
             if element.data_length > 0:
-                element.data = mcm_stream.read(element.data_length)
+                element.data = map_stream.read(element.data_length)
             else:
                 element.data = ''
 
-            mcm.elements.append(element)
+            map.elements.append(element)
 
         # 读取jump elements部分
-        for i in xrange(0, mcm.jump_point_num):
+        for i in xrange(0, map.jump_point_num):
             jump_point = MapJumpPoint()
-            jump_point_header_stream = StringIO(mcm_stream.read(48))
+            jump_point_header_stream = StringIO(map_stream.read(48))
 
             jump_point_fields = self.parse_fields(
                 jump_point_header_stream,
@@ -353,64 +353,64 @@ class MCMSerializer(FieldsSerializer):
 
             jump_point.update_fields(**jump_point_fields)
             if jump_point.data_length > 0:
-                jump_point.data = mcm_stream.read(jump_point.data_length)
+                jump_point.data = map_stream.read(jump_point.data_length)
 
-            mcm.jump_points.append(jump_point)
+            map.jump_points.append(jump_point)
 
-        return mcm
+        return map
 
-    def dump_to_stream(self, mcm, mcm_stream):
-        """ 将mcm文件保存在给定的流中 """
+    def dump_to_stream(self, map, map_stream):
+        """ 将map文件保存在给定的流中 """
 
-        # 写入mcm文件Header部分
-        mcm_fields = mcm.get_fields()
-        self.dump_fields(mcm_stream, mcm_fields, self.header_fields_desc)
+        # 写入map文件Header部分
+        map_fields = map.get_fields()
+        self.dump_fields(map_stream, map_fields, self.header_fields_desc)
 
-        # 写入mcm文件Tiles部分
-        assert len(mcm.tiles) == mcm.tile_row
-        for tile_row in mcm.tiles:
-            assert len(tile_row) == mcm.tile_col
+        # 写入map文件Tiles部分
+        assert len(map.tiles) == map.tile_row
+        for tile_row in map.tiles:
+            assert len(tile_row) == map.tile_col
 
             for tile in tile_row:
                 tile_byte = struct.pack('b', tile.to_byte())
-                mcm_stream.write(tile_byte)
+                map_stream.write(tile_byte)
 
-        # 写入mcm文件Elements部分
-        assert len(mcm.elements) == mcm.element_num
-        for element in mcm.elements:
+        # 写入map文件Elements部分
+        assert len(map.elements) == map.element_num
+        for element in map.elements:
             element_fields = element.get_fields()
             self.dump_fields(
-                mcm_stream, element_fields, self.element_header_fields_desc)
+                map_stream, element_fields, self.element_header_fields_desc)
 
             assert len(element.data) == element.data_length
-            mcm_stream.write(element.data)
+            map_stream.write(element.data)
 
-        # 写入mcm文件的JumpPoint部分
-        assert len(mcm.jump_points) == mcm.jump_point_num
-        for jump_point in mcm.jump_points:
+        # 写入map文件的JumpPoint部分
+        assert len(map.jump_points) == map.jump_point_num
+        for jump_point in map.jump_points:
             jump_point_fields = jump_point.get_fields()
             self.dump_fields(
-                mcm_stream, jump_point_fields, self.jump_point_header_fields_desc)
+                map_stream, jump_point_fields, self.jump_point_header_fields_desc)
 
             assert len(jump_point.data) == jump_point.data_length
-            mcm_stream.write(jump_point.data)
+            map_stream.write(jump_point.data)
 
-        return mcm_stream
+        return map_stream
 
-    def dump_to_file(self, mcm, file_path):
-        """ 将mcm文件保存在给定的文件中 """
+    def dump_to_file(self, map, file_path):
+        """ 将map文件保存在给定的文件中 """
 
-        mcm_stream = StringIO()
-        self.dump_to_stream(mcm, mcm_stream)
+        map_stream = StringIO()
+        self.dump_to_stream(map, map_stream)
 
-        mcm_stream.seek(0)
-        compressed_bin = zlib.compress(mcm_stream.read())
+        map_stream.seek(0)
+        compressed_bin = zlib.compress(map_stream.read())
         with open(file_path, 'wb') as f:
             f.write(compressed_bin)
 
 if __name__ == "__main__":
     file_path = "/home/tang/code/erlang/tang/erl_game_server/resource/map/mcm/105001.mcm"
-    mcm = MCMSerializer().read_from_file(file_path)
-    MCMSerializer().dump_to_file(mcm, '/tmp/105001.mcm')
-    mcm = MCMSerializer().read_from_file('/tmp/105001.mcm')
-    print mcm
+    map = MCMSerializer().read_from_file(file_path)
+    MCMSerializer().dump_to_file(map, '/tmp/105001.mcm')
+    map = MCMSerializer().read_from_file('/tmp/105001.mcm')
+    print map
