@@ -8,6 +8,14 @@ try:
 except:
     from StringIO import StringIO
 
+"""
+读取和保存地图文件，此文件格式和数据结构和《斗破苍穹》的游戏地图一样的，
+请参照具体格式请参照服务端中的地图设计，对mcm文件格式的分析。
+
+作者：唐万万
+日期：2013-10-18
+"""
+
 class FieldPackError(Exception):
     """ 在对某个字段进行序列化的时候出错。 """
     pass
@@ -17,6 +25,12 @@ class UnsupportConvertOption(Exception):
     pass
 
 class FieldsClass(object):
+
+    """
+    一个由描述字段组成的类
+    类的成员变量使用 __fields__ 一个词典来描述，如此就能够在某些情况下
+    像操作词典一样操作成员变量了。
+    """
 
     __fields__ = dict()
 
