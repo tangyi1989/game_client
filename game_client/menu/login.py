@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import pygame
+import constants as const
 from pgu import gui
 import global_vars as g
 
@@ -23,14 +24,14 @@ class LoginControl(gui.Table):
         self.td(btn)
 
     def access_game(self, btn):
-        pass
+        g.game_engine.set_state(const.INGAME)
 
 
 class MenuLogin(object):
 
     def __init__(self, surface):
         self.surface = surface
-        self.background_image = pygame.image.load(g.data_path + '/gui/background.jpg')
+        #self.background_image = pygame.image.load(g.data_path + '/gui/background.jpg')
 
         # GUI
         self.app = gui.App()
@@ -45,7 +46,8 @@ class MenuLogin(object):
         self.surface = surface
 
     def draw(self):
-        self.surface.blit(self.background_image, (0, 0))
+        #self.surface.blit(self.background_image, (0, 0))
+        self.surface.fill((255, 255, 255))
         self.app.paint()
 
         pygame.display.update()
