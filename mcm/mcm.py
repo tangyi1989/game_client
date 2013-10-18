@@ -8,14 +8,21 @@ try:
 except:
     from StringIO import StringIO
 
+class FieldPackError(Exception):
+    """ 在对某个字段进行序列化的时候出错。 """
+    pass
 
-class Fields(object):
+class UnsupportConvertOption(Exception):
+    """ 不支持的转换格式 """
+    pass
+
+class FieldsClass(object):
 
     __fields__ = dict()
 
     def __init__(self, **fields):
         # 进行这个调用来避免调用被重写的__setattr__
-        super(Fields, self).__setattr__("__self_fields__",
+        super(FieldsClass, self).__setattr__("__self_fields__",
                                         self.__fields__.copy())
         self.update_fields(**fields)
 
@@ -40,8 +47,89 @@ class Fields(object):
     def get_fields(self):
         return self.__self_fields__
 
+class FieldsSerializer(object):
 
-class MCM(Fields):
+    """ 对字段进行序列化和反序列化 """
+
+    def parse_fields(self, fields_stream, fields_desc):
+        """
+        根据字段描述，将流中的字段转化为一个词典
+        PARAMTERS:
+            fields_stream : 要转换的数据流
+            fields_desc : 字段描述，对流中数据的描述，用于转换，如下结构
+                [
+                    (fileld_name, pack_type, field_length, convert_option(可选)),
+                    ...
+                ]
+        RETURNS:
+            filelds dict() 转化后的字段
+        """
+
+        fields = {}
+
+        for field_desc in fields_desc:
+            field_name, pack_type, field_length = field_desc[:3]
+            field_data = fields_stream.read(field_length)
+
+            if len(field_desc) > 3:
+                convert_option = field_desc[3]
+                if convert_option == "raw":
+                    value = field_data
+                elif convert_option == "gb2312":
+                    value = field_data.decode('gb2312')
+                else:
+                    raise UnsupportConvertOption
+
+            elif len(field_desc) == 3:
+                unpacked = struct.unpack(pack_type, field_data)
+                value = unpacked[0] if len(unpacked) == 1 else unpacked
+
+            fields.setdefault(field_name, value)
+
+        return fields
+
+    def dump_fields(self, fields_stream, fields, fields_desc):
+        """
+        将字段按照字段描述写入流中
+        PARAMTERS:
+            fields_stream : 要写入的流
+            filelds : dict() 要写入的字段
+            fields_desc : 字段描述，对流中数据的描述，用于转换，如下结构
+                [
+                    (fileld_name, pack_type, field_length, convert_option(可选)),
+                    ...
+                ]
+        RETURNS:
+            fields_stream 传入的那个流
+        """
+
+        for field_desc in fields_desc:
+            field_name, pack_type, field_length = field_desc[:3]
+
+            if not fields.has_key(field_name):
+                raise AttributeError
+
+            value = fields.get(field_name, '')
+            if len(field_desc) > 3:
+                convert_option = field_desc[3]
+                if convert_option == "gb2312":
+                    field_data = value.encode("gb2312")
+                    field_data = struct.pack('%ss' % field_length, field_data)
+                else:
+                    raise UnsupportConvertOption
+            else:
+                field_data = struct.pack(pack_type, value)
+
+            if len(field_data) != field_length:
+                raise FieldPackError
+
+            fields_stream.write(field_data)
+
+        return fields_stream
+
+class Map(FieldsClass):
+
+    """ 地图 """
 
     __fields__ = {
         "map_id": None,
@@ -57,13 +145,15 @@ class MCM(Fields):
         "tw": None,
         "th": None,
 
-        "tiles": [[]],
+        "tiles": [],
         "elements": [],
         "jump_points": []
     }
 
 
-class Tile(Fields):
+class MapTile(FieldsClass):
+
+    """ 地图坐标格子 """
 
     __fields__ = {
         "reversed": False,
@@ -114,7 +204,10 @@ class Tile(Fields):
         return byteval
 
 
-class Element(Fields):
+class MapElement(FieldsClass):
+
+    """ 地图元素(怪物,NPC等) """
+
     __fields__ = {
         "id": None,
         "index_tx": None,
@@ -125,7 +218,10 @@ class Element(Fields):
     }
 
 
-class JumpPoint(Fields):
+class MapJumpPoint(FieldsClass):
+
+    """ 地图跳转点 """
+
     __fields__ = {
         "id": None,
         "index_tx": None,
@@ -142,14 +238,9 @@ class JumpPoint(Fields):
         "data": ''
     }
 
+class MCMSerializer(FieldsSerializer):
 
-class FieldPackError(Exception):
-    pass
-
-
-class MCMSerialize(object):
-
-    """ MCM文件读取器 """
+    """ Map文件序列化和反序列化 """
 
     header_fields_desc = [
         ("map_id", "!i", 4),
@@ -189,54 +280,6 @@ class MCMSerialize(object):
         ("data_length", "!i", 4),
     ]
 
-    def parse_fields(self, fields_stream, fields_desc):
-        """ 转换流中的字段 """
-
-        fields = {}
-
-        for field_desc in fields_desc:
-            field_name, pack_type, field_length = field_desc[:3]
-            field_data = fields_stream.read(field_length)
-
-            if len(field_desc) > 3:
-                convert_option = field_desc[3]
-                if convert_option == "raw":
-                    value = field_data
-                elif convert_option == "gb2312":
-                    value = field_data.decode('gb2312')
-            elif len(field_desc) == 3:
-                unpacked = struct.unpack(pack_type, field_data)
-                value = unpacked[0] if len(unpacked) == 1 else unpacked
-
-            fields.setdefault(field_name, value)
-
-        return fields
-
-    def dump_fields(self, fields_stream, fields, fields_desc):
-        """ 将字段按照字段描述写入流中 """
-
-        for field_desc in fields_desc:
-            field_name, pack_type, field_length = field_desc[:3]
-
-            if not fields.has_key(field_name):
-                raise AttributeError
-
-            value = fields.get(field_name, '')
-            if len(field_desc) > 3:
-                convert_option = field_desc[3]
-                if convert_option == "gb2312":
-                    field_data = value.encode("gb2312")
-                    field_data = struct.pack('%ss' % field_length, field_data)
-            else:
-                field_data = struct.pack(pack_type, value)
-
-            if len(field_data) != field_length:
-                raise FieldPackError
-
-            fields_stream.write(field_data)
-
-        return fields_stream
-
     def read_from_file(self, file_path):
         """ 读取并解析mcm文件 """
 
@@ -246,7 +289,7 @@ class MCMSerialize(object):
         raw_binary = zlib.decompress(compressed_bin)
         mcm_stream = StringIO(raw_binary)
 
-        mcm = MCM()
+        mcm = Map()
 
         # 读取Header部分
         header_stream = StringIO(mcm_stream.read(104))
@@ -262,7 +305,7 @@ class MCMSerialize(object):
             tile_row = []
             for x in xrange(0, mcm.tile_col):
                 tile_byte = struct.unpack('b', tile_stream.read(1))[0]
-                tile = Tile.from_byte(tile_byte)
+                tile = MapTile.from_byte(tile_byte)
                 tile_row.append(tile)
 
             tiles.append(tile_row)
@@ -271,7 +314,7 @@ class MCMSerialize(object):
 
         # 读取elements部分
         for i in xrange(0, mcm.element_num):
-            element = Element()
+            element = MapElement()
             element_header_stream = StringIO(mcm_stream.read(20))
             element_fields = self.parse_fields(
                 element_header_stream,
@@ -287,7 +330,7 @@ class MCMSerialize(object):
 
         # 读取jump elements部分
         for i in xrange(0, mcm.jump_point_num):
-            jump_point = JumpPoint()
+            jump_point = MapJumpPoint()
             jump_point_header_stream = StringIO(mcm_stream.read(48))
 
             jump_point_fields = self.parse_fields(
@@ -353,6 +396,7 @@ class MCMSerialize(object):
 
 if __name__ == "__main__":
     file_path = "/home/tang/code/erlang/tang/erl_game_server/resource/map/mcm/105001.mcm"
-    mcm = MCMSerialize().read_from_file(file_path)
-    MCMSerialize().dump_to_file(mcm, '/tmp/105001.mcm')
-    mcm = MCMSerialize().read_from_file('/tmp/105001.mcm')
+    mcm = MCMSerializer().read_from_file(file_path)
+    MCMSerializer().dump_to_file(mcm, '/tmp/105001.mcm')
+    mcm = MCMSerializer().read_from_file('/tmp/105001.mcm')
+    print mcm
