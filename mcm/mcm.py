@@ -141,7 +141,7 @@ class FieldsSerializer(object):
 
         return fields_stream
 
-class Map(FieldsClass):
+class TiledMap(FieldsClass):
 
     """ 地图 """
 
@@ -252,7 +252,7 @@ class MapJumpPoint(FieldsClass):
         "data": ''
     }
 
-class MapSerializer(FieldsSerializer):
+class TiledMapSerializer(FieldsSerializer):
 
     """ Map文件序列化和反序列化 """
 
@@ -301,51 +301,51 @@ class MapSerializer(FieldsSerializer):
             compressed_bin = f.read()
 
         raw_binary = zlib.decompress(compressed_bin)
-        map_stream = StringIO(raw_binary)
+        tiled_map_stream = StringIO(raw_binary)
 
-        map = Map()
+        tiled_map = TiledMap()
 
         # 读取Header部分
-        header_stream = StringIO(map_stream.read(104))
+        header_stream = StringIO(tiled_map_stream.read(104))
         header_fields = self.parse_fields(
             header_stream, self.header_fields_desc)
-        map.update_fields(**header_fields)
+        tiled_map.update_fields(**header_fields)
 
         # 读取tiles部分
         tiles = []
-        tile_length = map.tile_row * map.tile_col
-        tile_stream = StringIO(map_stream.read(tile_length))
-        for y in xrange(0, map.tile_row):
+        tile_length = tiled_map.tile_row * tiled_map.tile_col
+        tile_stream = StringIO(tiled_map_stream.read(tile_length))
+        for y in xrange(0, tiled_map.tile_row):
             tile_row = []
-            for x in xrange(0, map.tile_col):
+            for x in xrange(0, tiled_map.tile_col):
                 tile_byte = struct.unpack('b', tile_stream.read(1))[0]
                 tile = MapTile.from_byte(tile_byte)
                 tile_row.append(tile)
 
             tiles.append(tile_row)
 
-        map.tiles = tiles
+        tiled_map.tiles = tiles
 
         # 读取elements部分
-        for i in xrange(0, map.element_num):
+        for i in xrange(0, tiled_map.element_num):
             element = MapElement()
-            element_header_stream = StringIO(map_stream.read(20))
+            element_header_stream = StringIO(tiled_map_stream.read(20))
             element_fields = self.parse_fields(
                 element_header_stream,
                 self.element_header_fields_desc)
 
             element.update_fields(**element_fields)
             if element.data_length > 0:
-                element.data = map_stream.read(element.data_length)
+                element.data = tiled_map_stream.read(element.data_length)
             else:
                 element.data = ''
 
-            map.elements.append(element)
+            tiled_map.elements.append(element)
 
         # 读取jump elements部分
-        for i in xrange(0, map.jump_point_num):
+        for i in xrange(0, tiled_map.jump_point_num):
             jump_point = MapJumpPoint()
-            jump_point_header_stream = StringIO(map_stream.read(48))
+            jump_point_header_stream = StringIO(tiled_map_stream.read(48))
 
             jump_point_fields = self.parse_fields(
                 jump_point_header_stream,
@@ -353,64 +353,64 @@ class MapSerializer(FieldsSerializer):
 
             jump_point.update_fields(**jump_point_fields)
             if jump_point.data_length > 0:
-                jump_point.data = map_stream.read(jump_point.data_length)
+                jump_point.data = tiled_map_stream.read(jump_point.data_length)
 
-            map.jump_points.append(jump_point)
+            tiled_map.jump_points.append(jump_point)
 
-        return map
+        return tiled_map
 
-    def dump_to_stream(self, map, map_stream):
-        """ 将map文件保存在给定的流中 """
+    def dump_to_stream(self, tiled_map, tiled_map_stream):
+        """ 将tiled_map保存在给定的流中 """
 
-        # 写入map文件Header部分
-        map_fields = map.get_fields()
-        self.dump_fields(map_stream, map_fields, self.header_fields_desc)
+        # 写入Header部分
+        tiled_map_fields = tiled_map.get_fields()
+        self.dump_fields(tiled_map_stream, tiled_map_fields, self.header_fields_desc)
 
-        # 写入map文件Tiles部分
-        assert len(map.tiles) == map.tile_row
-        for tile_row in map.tiles:
-            assert len(tile_row) == map.tile_col
+        # 写入Tiles部分
+        assert len(tiled_map.tiles) == tiled_map.tile_row
+        for tile_row in tiled_map.tiles:
+            assert len(tile_row) == tiled_map.tile_col
 
             for tile in tile_row:
                 tile_byte = struct.pack('b', tile.to_byte())
-                map_stream.write(tile_byte)
+                tiled_map_stream.write(tile_byte)
 
-        # 写入map文件Elements部分
-        assert len(map.elements) == map.element_num
-        for element in map.elements:
+        # 写入Elements部分
+        assert len(tiled_map.elements) == tiled_map.element_num
+        for element in tiled_map.elements:
             element_fields = element.get_fields()
             self.dump_fields(
-                map_stream, element_fields, self.element_header_fields_desc)
+                tiled_map_stream, element_fields, self.element_header_fields_desc)
 
             assert len(element.data) == element.data_length
-            map_stream.write(element.data)
+            tiled_map_stream.write(element.data)
 
-        # 写入map文件的JumpPoint部分
-        assert len(map.jump_points) == map.jump_point_num
-        for jump_point in map.jump_points:
+        # 写入JumpPoint部分
+        assert len(tiled_map.jump_points) == tiled_map.jump_point_num
+        for jump_point in tiled_map.jump_points:
             jump_point_fields = jump_point.get_fields()
             self.dump_fields(
-                map_stream, jump_point_fields, self.jump_point_header_fields_desc)
+                tiled_map_stream, jump_point_fields, self.jump_point_header_fields_desc)
 
             assert len(jump_point.data) == jump_point.data_length
-            map_stream.write(jump_point.data)
+            tiled_map_stream.write(jump_point.data)
 
-        return map_stream
+        return tiled_map_stream
 
-    def dump_to_file(self, map, file_path):
-        """ 将map文件保存在给定的文件中 """
+    def dump_to_file(self, tiled_map, file_path):
+        """ 将tiled_map保存在给定的文件中 """
 
-        map_stream = StringIO()
-        self.dump_to_stream(map, map_stream)
+        tiled_map_stream = StringIO()
+        self.dump_to_stream(tiled_map, tiled_map_stream)
 
-        map_stream.seek(0)
-        compressed_bin = zlib.compress(map_stream.read())
+        tiled_map_stream.seek(0)
+        compressed_bin = zlib.compress(tiled_map_stream.read())
         with open(file_path, 'wb') as f:
             f.write(compressed_bin)
 
 if __name__ == "__main__":
     file_path = "/home/tang/code/erlang/tang/erl_game_server/resource/map/mcm/105001.mcm"
-    map = MapSerializer().read_from_file(file_path)
-    MapSerializer().dump_to_file(map, '/tmp/105001.mcm')
-    map = MapSerializer().read_from_file('/tmp/105001.mcm')
-    print map
+    tiled_map = TiledMapSerializer().read_from_file(file_path)
+    TiledMapSerializer().dump_to_file(tiled_map, '/tmp/105001.mcm')
+    tiled_map = TiledMapSerializer().read_from_file('/tmp/105001.mcm')
+    print tiled_map
