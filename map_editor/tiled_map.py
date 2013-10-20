@@ -34,11 +34,11 @@ class FieldsClass(object):
 
     __fields__ = dict()
 
-    def __init__(self, **fields):
+    def __init__(self, **kwargs):
         # 进行这个调用来避免调用被重写的__setattr__
         super(FieldsClass, self).__setattr__("__self_fields__",
                                         self.__fields__.copy())
-        self.update_fields(**fields)
+        self.update_fields(**kwargs)
 
     def __repr__(self):
         return str(self.__self_fields__)
@@ -55,11 +55,15 @@ class FieldsClass(object):
 
         return self.__self_fields__[key]
 
-    def update_fields(self, **fields):
-        self.__self_fields__.update(**fields)
+    def update_fields(self, **kwargs):
+        self.__self_fields__.update(**kwargs)
 
     def get_fields(self):
         return self.__self_fields__
+
+    @classmethod
+    def fields(cls):
+        return cls.__fields__.keys()
 
 class FieldsSerializer(object):
 
@@ -146,23 +150,51 @@ class TiledMap(FieldsClass):
     """ 地图 """
 
     __fields__ = {
-        "map_id": None,
-        "map_name": None,
-        "map_type": None,
-        "map_picture": None,
-        "tile_row": None,
-        "tile_col": None,
-        "element_num": None,
-        "jump_point_num": None,
-        "offset_x": None,
-        "offset_y": None,
-        "tw": None,
-        "th": None,
+        "map_id": 0,
+        "map_type": 1,
+        "map_name": 'untitled',
+        "map_picture": '',
+        "tile_row": 0,
+        "tile_col": 0,
+        "element_num": 0,
+        "jump_point_num": 0,
+        "offset_x": 0,
+        "offset_y": 0,
+        "tw": 0,
+        "th": 0,
 
         "tiles": [],
         "elements": [],
         "jump_points": []
     }
+
+    def resize_tiles(self, tile_col, tile_row):
+        """ 重置tiles的大小 """
+
+        if tile_col < 0 or tile_row < 0:
+            return
+
+        new_tiles = []
+        for y in xrange(0, tile_row):
+
+            tile_line = []
+            for x in xrange(0, tile_col):
+                if x < self.tile_col and y < self.tile_row:
+                    tile = self.tiles[y][x]
+                else:
+                    tile = MapTile()
+                
+                tile_line.append(tile)
+
+            new_tiles.append(tile_line)
+
+        self.tile_col = tile_col
+        self.tile_row = tile_row
+        self.tiles = new_tiles
+
+    def get_tile(self, x, y):
+        """ 获取指定位置的tile """
+        return self.tiles[y][x]
 
 
 class MapTile(FieldsClass):
@@ -216,6 +248,9 @@ class MapTile(FieldsClass):
             pos += 1
 
         return byteval
+
+    def __repr__(self):
+        return str(self.to_byte())
 
 
 class MapElement(FieldsClass):
@@ -409,7 +444,7 @@ class TiledMapSerializer(FieldsSerializer):
             f.write(compressed_bin)
 
 if __name__ == "__main__":
-    file_path = "/home/tang/code/erlang/tang/erl_game_server/resource/map/mcm/105001.mcm"
+    file_path = "/home/tang/code/erlang/tang/game-client/data/maps/mcm/105001.mcm"
     tiled_map = TiledMapSerializer().read_from_file(file_path)
     TiledMapSerializer().dump_to_file(tiled_map, '/tmp/105001.mcm')
     tiled_map = TiledMapSerializer().read_from_file('/tmp/105001.mcm')
