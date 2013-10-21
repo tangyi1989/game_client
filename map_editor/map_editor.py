@@ -80,10 +80,8 @@ class MapController(object):
         self.main_window.setCentralWidget(self.map_widget)
         self.main_window.show()
 
-        # self.create_new_map()
-        self.tiled_map = tiled_map.TiledMapSerializer().read_from_file(
-            "/home/tang/code/erlang/t4-server/config/map/mcm/10643.mcm")
-        self.view.on_changed_tiled_map(self.tiled_map)
+        self.create_new_map()
+
 
 
 class ThumbMapWidget(QtGui.QWidget):
