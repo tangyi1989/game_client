@@ -30,15 +30,17 @@ class MapController(object):
 
         map_file_path = QtGui.QFileDialog.getOpenFileName(
             self.view, u"打开地图文件", filter="*.mcm")
-        try:
-            self.tiled_map = tiled_map.TiledMapSerializer().read_from_file(
-                map_file_path)
-        except Exception as e:
-            message = u"打开地图文件时出现异常：%s" % e.message
-            QtGui.QMessageBox.warning(None, message, u"警告")
-            return
 
-        self.view.on_changed_tiled_map(self.tiled_map)
+        if map_file_path:
+            try:
+                self.tiled_map = tiled_map.TiledMapSerializer().read_from_file(
+                    map_file_path)
+            except Exception as e:
+                message = u"打开地图文件时出现异常：%s" % e.message
+                QtGui.QMessageBox.warning(None, u"警告", message)
+                return
+
+            self.view.on_changed_tiled_map(self.tiled_map)
 
     def open_map_picture(self):
         """ 打开游戏地图的背景图片 """
@@ -46,17 +48,25 @@ class MapController(object):
         image_file_path = QtGui.QFileDialog.getOpenFileName(
             self.view, u"打开背景文件", filter="*.jpg")
 
-        map_image = QtGui.QImage()
-        if not map_image.load(image_file_path):
-            message = u"打开地图图片错误:%s" % image_file_path
-            QtGui.QMessageBox.warning(None, message, u"错误")
-            return
+        if image_file_path:
+            map_image = QtGui.QImage()
+            if not map_image.load(image_file_path):
+                message = u"打开地图图片错误:%s" % image_file_path
+                QtGui.QMessageBox.warning(None, u"错误", message)
+                return
 
-        self.view.on_changed_map_image(map_image)
+            self.view.on_changed_map_image(map_image)
 
     def save_map_file(self):
         """ 保存地图文件 """
-        pass
+        file_path = QtGui.QFileDialog.getSaveFileName(self.view, u"保存地图文件", "", ".mcm")
+        if file_path:
+            try:
+                tiled_map.TiledMapSerializer().dump_to_file(self.tiled_map, file_path)
+            except Exception as e:
+                message = u"保存地图文件时出现异常：%s" % e.message
+                QtGui.QMessageBox.warning(None, u"警告", message)
+                return
 
     def quit(self):
         """ 退出程序 """
@@ -70,7 +80,10 @@ class MapController(object):
         self.main_window.setCentralWidget(self.map_widget)
         self.main_window.show()
 
-        self.create_new_map()
+        # self.create_new_map()
+        self.tiled_map = tiled_map.TiledMapSerializer().read_from_file(
+            "/home/tang/code/erlang/t4-server/config/map/mcm/10643.mcm")
+        self.view.on_changed_tiled_map(self.tiled_map)
 
 
 class ThumbMapWidget(QtGui.QWidget):
@@ -87,7 +100,9 @@ class TiledMapIsNone(Exception):
 
 class TiledMapWidget(QtGui.QWidget):
 
-    """ 编辑地图区域 """
+    """ 
+    编辑地图区域
+    """
 
     def __init__(self, parent=None):
         super(TiledMapWidget, self).__init__(parent)
@@ -102,16 +117,13 @@ class TiledMapWidget(QtGui.QWidget):
         self.rect_width = rect.width()
         self.rect_height = rect.height()
 
-        # 格子数目
-        self.tile_x_num = 30
-        self.tile_y_num = 30
-
-        self.tile_width = int(self.rect_width / self.tile_x_num)
-        self.tile_height = int(self.rect_height / self.tile_y_num)
-
-        # 起始坐标
+        # 起始格子位置
         self.tile_begin_x = 0
         self.tile_begin_y = 0
+
+        # 设置地图图片偏移
+        self.map_image_offset_x = 0
+        self.map_image_offset_y = 9
 
         # 鼠标位于的正要操作的那个网格
         self.active_grid = None
@@ -119,14 +131,22 @@ class TiledMapWidget(QtGui.QWidget):
         # 要显示的图层
         self.displayed_tiled_layer = 'exist'
 
+        # 定时器时间
+        self.timer_ms = 30
+        # 此结构是为了控制移动速度
+        self.direct_stack = []
+        self.shoud_update = True
+
+        self.init_move_regions()
         self.init_pixmap()
-        self.setup_timer()
+        self.set_tile_size(20, 20)
+        
+        self.init_timer()
 
     def init_pixmap(self):
         # 地图后面的图片
         self.map_image_pixmap = QtGui.QPixmap(
             self.rect_width, self.rect_height)
-        self.set_alpha_channel(self.map_image_pixmap)
 
         # Tiled层
         self.tiled_layer_pixmap = QtGui.QPixmap(
@@ -145,15 +165,111 @@ class TiledMapWidget(QtGui.QWidget):
         # 用于合成然后绘制在屏幕上的 pixmap
         self.buffer_pixmap = QtGui.QPixmap(self.rect_width, self.rect_height)
 
-    def setup_timer(self):
+    def init_timer(self):
         self.timer = QtCore.QTimer(self)
-        self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.timeout)
-        self.timer.start(30)
+        self.connect(
+            self.timer, QtCore.SIGNAL("timeout()"), self.timeout_event)
+        self.timer.start(self.timer_ms)
+
+    def init_move_regions(self):
+        """
+        初始化移动区域所需数据
+
+        当鼠标位于如下标注的格子中时，地图将会移动。 
+        -------------------------------------
+        |       |                   |       |
+        |(-1,-1)|      (0, -1)      |(1, -1)|
+        |       |                   |       |
+        |-----------------------------------|
+        |       |                   |       |
+        |       |                   |       |
+        |       |                   |       |
+        |(-1, 0)|       (0, 0)      | (1, 0)|
+        |       |                   |       |
+        |       |                   |       |
+        |       |                   |       |
+        |-----------------------------------|
+        |       |                   |       |
+        |(-1, 1)|      (0, 1)       |(1, 1) |
+        |       |                   |       |
+        -------------------------------------
+        """
+
+        region_width = 100
+        self.move_regions = [
+            # 第一行
+            (
+                (0, 0,
+                 region_width, region_width), (-1, -1)
+            ),
+            (
+                (region_width, 0,
+                 self.rect_width - region_width, region_width), (0, -1)
+            ),
+            (
+                (self.rect_width - region_width, 0,
+                 self.rect_width, region_width), (1, -1)
+            ),
+            # 第二行
+            (
+                (0, region_width,
+                 region_width, self.rect_height - region_width), (-1, 0)
+            ),
+            (
+                (region_width, region_width,
+                 self.rect_width - region_width, self.rect_height - region_width), (0, 0)
+            ),
+            (
+                (self.rect_width - region_width, region_width,
+                 self.rect_width, self.rect_height - region_width), (1, 0)
+            ),
+            # 第三行
+            (
+                (0, self.rect_height - region_width,
+                 region_width, self.rect_height), (-1, 1)
+            ),
+            (
+                (region_width, self.rect_height - region_width,
+                 self.rect_width - region_width, self.rect_height), (0, 1)
+            ),
+            (
+                (self.rect_width - region_width, self.rect_height - region_width,
+                 self.rect_width, self.rect_height), (1, 1)
+            )
+        ]
+
+    def get_move_direct(self, cur_x, cur_y):
+        """ 通过鼠标位置，获取需要地图移动的方向 """
+
+
+        move_direct = (0, 0)
+
+        for move_region in self.move_regions:
+            
+            region = move_region[0]
+            direct = move_region[1]
+            
+            if cur_x >= region[0] and cur_y >= region[1] \
+                and cur_x < region[2] and cur_y < region[3]:
+
+                move_direct = direct
+                break
+
+        return move_direct
+
+    def set_tile_size(self, width, height):
+        """ 设置格子尺寸 """
+        self.tile_width = width
+        self.tile_height = height
+        self.tile_x_num = int(self.rect_width / self.tile_width)
+        self.tile_y_num = int(self.rect_height / self.tile_height)
+        self.paint_grid()
+        self.paint_tiled_layer()
+
 
     def set_map_image(self, map_image):
         self.map_image = map_image
         self.paint_map_image()
-        # TODO something more
 
     def set_tiled_map(self, tiled_map):
         self.tiled_map = tiled_map
@@ -165,11 +281,72 @@ class TiledMapWidget(QtGui.QWidget):
         self.paint_grid()
         self.paint_tiled_layer()
 
+    def set_layer(self, layer):
+        self.displayed_tiled_layer = layer
+        self.paint_tiled_layer()
+        self.paint_operate_layer()
+
     def resize_tiles(self, tile_col, tile_row):
+        """ 重置地图的尺寸 """
         self.tiled_map.resize_tiles(tile_col, tile_row)
 
         self.paint_grid()
         self.paint_tiled_layer()
+
+    def move_display_region(self, direct_x, direct_y):
+        """ 移动眼睛可以观看的移动区域 """
+
+        def threadhold(val, t_min, t_max):
+            if val <= t_min:
+                return t_min
+            elif val > t_max:
+                return t_max
+            return val
+
+        def do_move_display(direct_x, direct_y):
+            if self.tiled_map is None:
+                return
+
+            if self.tiled_map.tile_col - self.tile_x_num > 0:
+                max_x = self.tiled_map.tile_col - self.tile_x_num
+            else:
+                max_x = 0
+
+            if self.tiled_map.tile_row - self.tile_y_num > 0:
+                max_y = self.tiled_map.tile_row - self.tile_y_num
+            else:
+                max_y = 0
+
+            x, y = (self.tile_begin_x, self.tile_begin_y)
+
+            self.tile_begin_x = threadhold(x + direct_x, 0, max_x)
+            self.tile_begin_y = threadhold(y + direct_y, 0, max_y)
+
+            if (x, y) != (self.tile_begin_x, self.tile_begin_y):
+                self.paint_grid()
+                self.paint_map_image()
+                self.paint_tiled_layer()
+
+        direct = (direct_x, direct_y)
+        
+        d_stack = self.direct_stack
+        d_stack.append(direct)
+
+        if len(d_stack) != 2:
+            return
+
+        first_d = d_stack[0]
+        move = True
+        for d in d_stack:
+            if d != first_d:
+                move = False
+                break
+
+        if move:
+            do_move_display(*first_d)
+            self.direct_stack = []
+        else:
+            self.direct_stack.pop(0)
 
     def get_grid_pos(self, cursor_x, cursor_y):
         """ 根据鼠标的位置，获取当前鼠标放置在哪个网格上 """
@@ -178,46 +355,82 @@ class TiledMapWidget(QtGui.QWidget):
 
         return pos_x, pos_y
 
-    def set_alpha_channel(self, pixmap, alpha=10):
+    def get_tile_pos(self):
+        if self.active_grid:
+            x, y = self.active_grid
+            x = x + self.tile_begin_x
+            y = y + self.tile_begin_y
+
+            if x < self.tiled_map.tile_col and \
+                y < self.tiled_map.tile_row:
+
+                return x, y
+
+        return None
+
+    def set_alpha_channel(self, pixmap, alpha=150):
         """ 设置pixmap的apha通道（透明处理） """
 
         alpha_channel = pixmap.alphaChannel()
+
         painter = QtGui.QPainter()
         painter.begin(alpha_channel)
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
         painter.setPen(QtCore.Qt.white)
-        painter.fillRect(pixmap.rect(), QtGui.QBrush(QtGui.QColor(0, 0, 0, alpha)))
+        painter.fillRect(
+            pixmap.rect(), QtGui.QBrush(QtGui.QColor(0, 0, 0, alpha)))
         painter.end()
+
         pixmap.setAlphaChannel(alpha_channel)
 
         return pixmap
 
-    def timeout(self):
-        """ 定时器事件：用于定时得到鼠标位置信息，然后进行地图的移动。 """
-
-        coursor_point = self.mapFromGlobal(QtGui.QCursor.pos())
-        if coursor_point.x() >= 0 and coursor_point.y() >= 0 \
-            and coursor_point.x() < self.rect_width \
-            and coursor_point.y() < self.rect_height:
-
-            grid_pos = self.get_grid_pos(coursor_point.x(), coursor_point.y())
-            self.set_active_grid(grid_pos)
-
-        else:
-            self.set_active_grid(None)
-
     def set_active_grid(self, grid):
         """ 设置当前活跃的位置 """
+
         if grid == self.active_grid:
             return
 
         self.active_grid = grid
         self.paint_operate_layer()
 
+    def timeout_event(self):
+        """ 定时器事件：用于定时得到鼠标位置信息，然后进行地图的移动。 """
+
+        coursor_point = self.mapFromGlobal(QtGui.QCursor.pos())
+        cur_x, cur_y = coursor_point.x(), coursor_point.y()
+
+        grid_pos = None
+        
+        if cur_x >= 0 and cur_y >= 0 and cur_x < self.rect_width \
+            and cur_y < self.rect_height:
+
+            # 设置当前鼠标所在的格子位置
+            grid_pos = self.get_grid_pos(coursor_point.x(), coursor_point.y())
+
+            # 地图要移动的方向
+            direct_x, direct_y = self.get_move_direct(cur_x, cur_y)
+            self.move_display_region(direct_x, direct_y)
+
+        self.set_active_grid(grid_pos)
+        if self.shoud_update:
+            self.update()
+            self.shoud_update = False
+
     def paintEvent(self, event):
         # 将pixmap画在Widget上
         p = QtGui.QPainter(self)
         p.drawPixmap(0, 0, self.buffer_pixmap)
+
+    def mousePressEvent(self, event):
+        """ 鼠标点击，设置tile """
+        pos = self.get_tile_pos()
+        if pos:
+            x, y = pos
+            tile = self.tiled_map.get_tile(x, y)
+            val = getattr(tile, self.displayed_tiled_layer)
+            setattr(tile, self.displayed_tiled_layer, not val)
+            self.paint_tiled_layer()
 
     def repaint(self):
         """
@@ -228,6 +441,10 @@ class TiledMapWidget(QtGui.QWidget):
         painter = QtGui.QPainter()
         painter.begin(self.buffer_pixmap)
 
+        # 先将图片涂黑
+        painter.fillRect(0, 0, self.rect_width, self.rect_height,
+                         QtGui.QColor(0x000000))
+
         # 底层，地图图片层
         painter.drawPixmap(0, 0, self.map_image_pixmap)
 
@@ -235,7 +452,6 @@ class TiledMapWidget(QtGui.QWidget):
         if self.tiled_layer_mask:
             self.tiled_layer_pixmap.setMask(self.tiled_layer_mask)
         painter.drawPixmap(0, 0, self.tiled_layer_pixmap)
-        self.set_alpha_channel(self.tiled_layer_pixmap)
 
         # 网格层
         if self.grid_mask:
@@ -248,7 +464,7 @@ class TiledMapWidget(QtGui.QWidget):
         painter.drawPixmap(0, 0, self.operate_layer_pixmap)
 
         painter.end()
-        self.update()
+        self.shoud_update = True
 
     def paint_tiled_layer(self):
         """ 绘制tiled层(只绘制某一层) """
@@ -262,7 +478,7 @@ class TiledMapWidget(QtGui.QWidget):
             painter.fillRect(
                 0, 0, self.rect_width, self.rect_height, background_color)
 
-            if tiled_map is None:
+            if self.tiled_map is None:
                 raise TiledMapIsNone
 
             tile_end_x = self.tiled_map.tile_col - self.tile_begin_x
@@ -276,23 +492,28 @@ class TiledMapWidget(QtGui.QWidget):
 
             for x in xrange(self.tile_begin_x, tile_end_x):
                 for y in xrange(self.tile_begin_y, tile_end_y):
+
                     tile = self.tiled_map.get_tile(x, y)
                     filled = getattr(tile, self.displayed_tiled_layer)
 
                     if filled:
                         painter.fillRect(
-                            x * self.tile_width, y * self.tile_height,
+                            (x - self.tile_begin_x) * self.tile_width,
+                            (y - self.tile_begin_y) * self.tile_height,
                             self.tile_width, self.tile_height, layer_color)
 
         except TiledMapIsNone:
             pass
-        except Exception as e:
-            print 'Exception : %s' % e.message
-            raise e
         finally:
             painter.end()
             self.tiled_layer_mask = self.tiled_layer_pixmap.createMaskFromColor(
                 background_color)
+
+            if self.tiled_map:
+                self.set_alpha_channel(self.tiled_layer_pixmap, 125)
+            else:
+                self.set_alpha_channel(self.tiled_layer_pixmap, 255)
+
             self.repaint()
 
     def paint_operate_layer(self):
@@ -309,6 +530,7 @@ class TiledMapWidget(QtGui.QWidget):
                 raise TiledMapIsNone
 
             painter.setPen(QtGui.QColor(255, 0, 0))
+            painter.setFont(QtGui.QFont('Decorative', 20))
 
             if self.active_grid is not None:
 
@@ -317,6 +539,18 @@ class TiledMapWidget(QtGui.QWidget):
 
                 painter.drawRect(
                     begin_x, begin_y, self.tile_width, self.tile_height)
+
+
+            pos = self.get_tile_pos()
+            if pos:
+                painter.drawText(
+                    QtCore.QRect(10, 30, 200, 30),
+                    QtCore.Qt.AlignLeft, "Pos : %s, %s" % (pos[0], pos[1]))
+
+            painter.drawText(
+                QtCore.QRect(10, 0, 200, 30),
+                QtCore.Qt.AlignLeft, "Layer : %s" % self.displayed_tiled_layer)
+
         except TiledMapIsNone:
             pass
         finally:
@@ -358,6 +592,7 @@ class TiledMapWidget(QtGui.QWidget):
                         x * self.tile_width, 0, x * self.tile_width, end_y)
                     painter.drawLine(
                         0, y * self.tile_height, end_x, y * self.tile_height)
+
         except TiledMapIsNone:
             pass
         finally:
@@ -380,7 +615,7 @@ class TiledMapWidget(QtGui.QWidget):
             0, 0, self.rect_width, self.rect_height, background_color)
         paint_begin_x = self.tile_begin_x * self.tile_width
         paint_begin_y = self.tile_begin_y * self.tile_height
-        painter.drawImage(paint_begin_x, paint_begin_y, self.map_image)
+        painter.drawImage(-paint_begin_x, -paint_begin_y, self.map_image)
 
         painter.end()
         self.repaint()
@@ -399,6 +634,13 @@ class MapWidget(QtGui.QWidget):
     def setup_layout(self):
         """ 设置界面布局 """
 
+        def set_layer_func(layer):
+            """ 返回用于设置层的闭包函数 """
+            def set_layer():
+                self.tiled_map_widget.set_layer(layer)
+
+            return set_layer
+
         # 主地图编辑器区域
         self.tiled_map_widget = TiledMapWidget()
 
@@ -416,18 +658,41 @@ class MapWidget(QtGui.QWidget):
         self.connect(self.resize_tiles_button,
                      QtCore.SIGNAL("clicked()"), self.on_resize_tiles_click)
 
-        # 右边的布局
-        right_layout = QtGui.QFormLayout()
-        right_layout.addRow(map_name, self.map_name_edit)
-        right_layout.addRow(map_picture, self.map_picture_edit)
-        right_layout.addRow(tile_col, self.tile_col_box)
-        right_layout.addRow(tile_row, self.tile_row_box)
-        right_layout.addWidget(self.resize_tiles_button)
+        tile_width = QtGui.QLabel(u'格子长度')
+        self.tile_width_box = QtGui.QSpinBox()
+        self.tile_width_box.setValue(20)
+        tile_height = QtGui.QLabel(u'格子宽度')
+        self.tile_height_box = QtGui.QSpinBox()
+        self.tile_height_box.setValue(20)
+        self.tile_size_button = QtGui.QPushButton(u'重置Tiles尺寸')
+        self.connect(self.tile_size_button,
+                     QtCore.SIGNAL("clicked()"), self.on_tile_size_click)
 
-        self.exist_layer_button = QtGui.QPushButton(u'Exist层')
-        self.element_layer_button = QtGui.QPushButton(u'Element层')
-        # right_layout.addWidget(self.exist_layer_button)
-        # right_layout.addWidget(self.element_layer_button)
+        # 地图属性
+        map_attr_layout = QtGui.QFormLayout()
+        map_attr_layout.addRow(map_name, self.map_name_edit)
+        map_attr_layout.addRow(map_picture, self.map_picture_edit)
+        
+        map_attr_layout.addRow(tile_col, self.tile_col_box)
+        map_attr_layout.addRow(tile_row, self.tile_row_box)
+        map_attr_layout.addWidget(self.resize_tiles_button)
+
+        map_attr_layout.addRow(tile_width, self.tile_width_box)
+        map_attr_layout.addRow(tile_height, self.tile_height_box)
+        map_attr_layout.addWidget(self.tile_size_button)
+
+        # 右边的布局
+        right_layout = QtGui.QVBoxLayout()
+
+        for layer in ('exist', 'alpha'):
+            button = QtGui.QPushButton(u'%s层' % layer)
+            self.connect(button,
+                QtCore.SIGNAL("clicked()"), 
+                set_layer_func(layer))
+
+            right_layout.addWidget(button)
+
+        right_layout.addLayout(map_attr_layout)
 
         # 主布局
         main_layout = QtGui.QHBoxLayout()
@@ -442,6 +707,11 @@ class MapWidget(QtGui.QWidget):
         tile_col = self.tile_col_box.value()
         tile_row = self.tile_row_box.value()
         self.tiled_map_widget.resize_tiles(tile_col, tile_row)
+
+    def on_tile_size_click(self):
+        tile_width = self.tile_width_box.value()
+        tile_height = self.tile_height_box.value()
+        self.tiled_map_widget.set_tile_size(tile_width, tile_height)
 
     def on_changed_tiled_map(self, tiled_map):
         self.tiled_map = tiled_map
@@ -464,7 +734,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def __init__(self, controller):
         super(MainWindow, self).__init__()
-        self.title_prefix = u"Map地图编辑器"
+        self.title_prefix = u"地图编辑器"
         self.controller = controller
         self.init_UI()
 

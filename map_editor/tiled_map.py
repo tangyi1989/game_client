@@ -94,7 +94,7 @@ class FieldsSerializer(object):
                 if convert_option == "raw":
                     value = field_data
                 elif convert_option == "gb2312":
-                    value = field_data.decode('gb2312')
+                    value = field_data.decode('gb2312').rstrip()
                 else:
                     raise UnsupportConvertOption
 
@@ -160,8 +160,8 @@ class TiledMap(FieldsClass):
         "jump_point_num": 0,
         "offset_x": 0,
         "offset_y": 0,
-        "tw": 0,
-        "th": 0,
+        "tw": 20,
+        "th": 20,
 
         "tiles": [],
         "elements": [],
@@ -175,18 +175,14 @@ class TiledMap(FieldsClass):
             return
 
         new_tiles = []
-        for y in xrange(0, tile_row):
-
-            tile_line = []
-            for x in xrange(0, tile_col):
+        for x in xrange(0, tile_col):
+            for y in xrange(0, tile_row):
                 if x < self.tile_col and y < self.tile_row:
-                    tile = self.tiles[y][x]
+                    tile = self.get_tile(x, y)
                 else:
                     tile = MapTile()
                 
-                tile_line.append(tile)
-
-            new_tiles.append(tile_line)
+                new_tiles.append(tile)
 
         self.tile_col = tile_col
         self.tile_row = tile_row
@@ -194,7 +190,7 @@ class TiledMap(FieldsClass):
 
     def get_tile(self, x, y):
         """ 获取指定位置的tile """
-        return self.tiles[y][x]
+        return self.tiles[self.tile_row * x + y]
 
 
 class MapTile(FieldsClass):
@@ -296,8 +292,8 @@ class TiledMapSerializer(FieldsSerializer):
         ("map_type", "!i", 4),
         ("map_name", None, 32, 'gb2312'),
         ("map_picture", None, 32, 'gb2312'),
-        ("tile_row", "!i", 4),
         ("tile_col", "!i", 4),
+        ("tile_row", "!i", 4),
         ("element_num", "!i", 4),
         ("jump_point_num", "!i", 4),
         ("offset_x", "!i", 4),
@@ -350,14 +346,11 @@ class TiledMapSerializer(FieldsSerializer):
         tiles = []
         tile_length = tiled_map.tile_row * tiled_map.tile_col
         tile_stream = StringIO(tiled_map_stream.read(tile_length))
-        for y in xrange(0, tiled_map.tile_row):
-            tile_row = []
-            for x in xrange(0, tiled_map.tile_col):
-                tile_byte = struct.unpack('b', tile_stream.read(1))[0]
-                tile = MapTile.from_byte(tile_byte)
-                tile_row.append(tile)
 
-            tiles.append(tile_row)
+        for i in xrange(0, tiled_map.tile_row * tiled_map.tile_col):
+            tile_byte = struct.unpack('b', tile_stream.read(1))[0]
+            tile = MapTile.from_byte(tile_byte)
+            tiles.append(tile)
 
         tiled_map.tiles = tiles
 
@@ -402,13 +395,11 @@ class TiledMapSerializer(FieldsSerializer):
         self.dump_fields(tiled_map_stream, tiled_map_fields, self.header_fields_desc)
 
         # 写入Tiles部分
-        assert len(tiled_map.tiles) == tiled_map.tile_row
-        for tile_row in tiled_map.tiles:
-            assert len(tile_row) == tiled_map.tile_col
-
-            for tile in tile_row:
-                tile_byte = struct.pack('b', tile.to_byte())
-                tiled_map_stream.write(tile_byte)
+        tile_num = tiled_map.tile_row * tiled_map.tile_col
+        assert len(tiled_map.tiles) == tile_num
+        for tile in tiled_map.tiles:
+            tile_byte = struct.pack('b', tile.to_byte())
+            tiled_map_stream.write(tile_byte)
 
         # 写入Elements部分
         assert len(tiled_map.elements) == tiled_map.element_num
