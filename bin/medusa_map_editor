@@ -1,0 +1,13 @@
+#*_* coding=utf8 *_*
+#!/usr/bin/env python
+
+"""
+地图编辑器启动脚本
+
+作者：唐万万
+时间：2013-10-23
+"""
+
+from medusa.map_editor import app
+
+app.start()
