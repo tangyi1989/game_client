@@ -1,7 +1,9 @@
 #*_* coding=utf8 *_*
 #!/usr/bin/env python
 
+import os
 import sys
+import signal
 import tiled_map
 from PyQt4 import QtCore, QtGui
 
@@ -277,6 +279,7 @@ class TiledMapWidget(QtGui.QWidget):
 
         self.paint_grid()
         self.paint_tiled_layer()
+        self.paint_operate_layer()
 
     def set_layer(self, layer):
         self.displayed_tiled_layer = layer
@@ -780,6 +783,28 @@ class MainWindow(QtGui.QMainWindow):
         file_menu.addAction(quit_action)
 
 
+def leave_terminal():
+    """ 让程序脱离terminal运行。 """
+    # drop tty
+    if os.fork() != 0:
+        os._exit(0)  # pylint: disable=W0212
+
+    os.setsid()
+
+    # drop stdio
+    for fd in range(0, 2):
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+
+    os.open(os.devnull, os.O_RDWR)
+    os.dup2(0, 1)
+    os.dup2(0, 2)
+
+    signal.signal(signal.SIGHUP, signal.SIG_IGN)
+
 if __name__ == '__main__':
+    leave_terminal()
     MapController().init()
     app.exec_()
