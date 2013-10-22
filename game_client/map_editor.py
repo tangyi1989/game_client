@@ -59,10 +59,12 @@ class MapController(object):
 
     def save_map_file(self):
         """ 保存地图文件 """
-        file_path = QtGui.QFileDialog.getSaveFileName(self.view, u"保存地图文件", "", ".mcm")
+        file_path = QtGui.QFileDialog.getSaveFileName(
+            self.view, u"保存地图文件", "", ".mcm")
         if file_path:
             try:
-                tiled_map.TiledMapSerializer().dump_to_file(self.tiled_map, file_path)
+                tiled_map.TiledMapSerializer().dump_to_file(
+                    self.tiled_map, file_path)
             except Exception as e:
                 message = u"保存地图文件时出现异常：%s" % e.message
                 QtGui.QMessageBox.warning(None, u"警告", message)
@@ -81,7 +83,6 @@ class MapController(object):
         self.main_window.show()
 
         self.create_new_map()
-
 
 
 class ThumbMapWidget(QtGui.QWidget):
@@ -133,12 +134,12 @@ class TiledMapWidget(QtGui.QWidget):
         self.timer_ms = 30
         # 此结构是为了控制移动速度
         self.direct_stack = []
-        self.shoud_update = True
+        self.repainted = False
 
         self.init_move_regions()
         self.init_pixmap()
         self.set_tile_size(20, 20)
-        
+
         self.init_timer()
 
     def init_pixmap(self):
@@ -239,14 +240,13 @@ class TiledMapWidget(QtGui.QWidget):
     def get_move_direct(self, cur_x, cur_y):
         """ 通过鼠标位置，获取需要地图移动的方向 """
 
-
         move_direct = (0, 0)
 
         for move_region in self.move_regions:
-            
+
             region = move_region[0]
             direct = move_region[1]
-            
+
             if cur_x >= region[0] and cur_y >= region[1] \
                 and cur_x < region[2] and cur_y < region[3]:
 
@@ -263,7 +263,6 @@ class TiledMapWidget(QtGui.QWidget):
         self.tile_y_num = int(self.rect_height / self.tile_height)
         self.paint_grid()
         self.paint_tiled_layer()
-
 
     def set_map_image(self, map_image):
         self.map_image = map_image
@@ -326,7 +325,7 @@ class TiledMapWidget(QtGui.QWidget):
                 self.paint_tiled_layer()
 
         direct = (direct_x, direct_y)
-        
+
         d_stack = self.direct_stack
         d_stack.append(direct)
 
@@ -399,7 +398,7 @@ class TiledMapWidget(QtGui.QWidget):
         cur_x, cur_y = coursor_point.x(), coursor_point.y()
 
         grid_pos = None
-        
+
         if cur_x >= 0 and cur_y >= 0 and cur_x < self.rect_width \
             and cur_y < self.rect_height:
 
@@ -411,9 +410,9 @@ class TiledMapWidget(QtGui.QWidget):
             self.move_display_region(direct_x, direct_y)
 
         self.set_active_grid(grid_pos)
-        if self.shoud_update:
+        if self.repainted:
+            self.repaint()
             self.update()
-            self.shoud_update = False
 
     def paintEvent(self, event):
         # 将pixmap画在Widget上
@@ -462,7 +461,6 @@ class TiledMapWidget(QtGui.QWidget):
         painter.drawPixmap(0, 0, self.operate_layer_pixmap)
 
         painter.end()
-        self.shoud_update = True
 
     def paint_tiled_layer(self):
         """ 绘制tiled层(只绘制某一层) """
@@ -479,14 +477,13 @@ class TiledMapWidget(QtGui.QWidget):
             if self.tiled_map is None:
                 raise TiledMapIsNone
 
-            tile_end_x = self.tiled_map.tile_col - self.tile_begin_x
-            tile_end_y = self.tiled_map.tile_row - self.tile_begin_y
+            tile_end_x = self.tile_begin_x + self.tile_x_num
+            if tile_end_x > self.tiled_map.tile_col:
+                tile_end_x = self.tiled_map.tile_col
 
-            if tile_end_x - self.tile_begin_x > self.tile_x_num:
-                tile_end_x = self.tile_begin_x + self.tile_x_num
-
-            if tile_end_y - self.tile_begin_y > self.tile_y_num:
-                tile_end_y = self.tile_begin_y + self.tile_y_num
+            tile_end_y = self.tile_begin_y + self.tile_y_num
+            if tile_end_y > self.tiled_map.tile_row:
+                tile_end_y = self.tiled_map.tile_row
 
             for x in xrange(self.tile_begin_x, tile_end_x):
                 for y in xrange(self.tile_begin_y, tile_end_y):
@@ -509,10 +506,8 @@ class TiledMapWidget(QtGui.QWidget):
 
             if self.tiled_map:
                 self.set_alpha_channel(self.tiled_layer_pixmap, 125)
-            else:
-                self.set_alpha_channel(self.tiled_layer_pixmap, 255)
-
-            self.repaint()
+                
+            self.repainted = True
 
     def paint_operate_layer(self):
         """ 绘制操作层 """
@@ -538,7 +533,6 @@ class TiledMapWidget(QtGui.QWidget):
                 painter.drawRect(
                     begin_x, begin_y, self.tile_width, self.tile_height)
 
-
             pos = self.get_tile_pos()
             if pos:
                 painter.drawText(
@@ -555,7 +549,8 @@ class TiledMapWidget(QtGui.QWidget):
             painter.end()
             self.operate_layer_mask = self.operate_layer_pixmap.createMaskFromColor(
                 background_color)
-            self.repaint()
+
+            self.repainted = True
 
     def paint_grid(self):
         """ 画出地图网格 """
@@ -597,7 +592,7 @@ class TiledMapWidget(QtGui.QWidget):
             self.grid_mask = self.grid_pixmap.createMaskFromColor(
                 background_color)
             painter.end()
-            self.repaint()
+            self.repainted = True
 
     def paint_map_image(self):
         """ 绘制地图背景图片 """
@@ -616,7 +611,7 @@ class TiledMapWidget(QtGui.QWidget):
         painter.drawImage(-paint_begin_x, -paint_begin_y, self.map_image)
 
         painter.end()
-        self.repaint()
+        self.repainted = True
 
 
 class MapWidget(QtGui.QWidget):
@@ -670,7 +665,7 @@ class MapWidget(QtGui.QWidget):
         map_attr_layout = QtGui.QFormLayout()
         map_attr_layout.addRow(map_name, self.map_name_edit)
         map_attr_layout.addRow(map_picture, self.map_picture_edit)
-        
+
         map_attr_layout.addRow(tile_col, self.tile_col_box)
         map_attr_layout.addRow(tile_row, self.tile_row_box)
         map_attr_layout.addWidget(self.resize_tiles_button)
@@ -685,8 +680,8 @@ class MapWidget(QtGui.QWidget):
         for layer in ('exist', 'alpha'):
             button = QtGui.QPushButton(u'%s层' % layer)
             self.connect(button,
-                QtCore.SIGNAL("clicked()"), 
-                set_layer_func(layer))
+                         QtCore.SIGNAL("clicked()"),
+                         set_layer_func(layer))
 
             right_layout.addWidget(button)
 
