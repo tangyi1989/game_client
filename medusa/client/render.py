@@ -3,7 +3,7 @@
 
 import pygame
 from gui.gui import GameGUI
-import global_vars as g
+from medusa.client import global_vars as g
 
 class RenderEngine():
     def __init__(self):

@@ -4,7 +4,7 @@
 import sys
 import engine
 import pygame
-import global_vars as g
+from medusa.client import global_vars as g
 
 reload(sys)
 sys.setdefaultencoding('utf-8')

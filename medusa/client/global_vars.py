@@ -2,8 +2,8 @@
 # -*- coding: UTF-8 -*-
 
 import os
-import constants
 import pygame
+from medusa.client import constants
 
 pygame.init()
 

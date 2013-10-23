@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 from pgu import gui
-import global_vars as g
+from medusa.client import global_vars as g
 
 class MenuContainer(gui.Container):
     def __init__(self, **params):
