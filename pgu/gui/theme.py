@@ -71,7 +71,7 @@ class Theme:
         #in /usr/lib/python2.3/site-packages/pgu/
         #or c:\python23\lib\site-packages\pgu\
         #the data is in ... lib/../share/ ...
-        dnames.append(os.path.join(os.path.dirname(__file__),"..","..","..","data","themes",name))
+        dnames.append(os.path.join(os.path.dirname(__file__),"..","data","themes",name))
         dnames.append(os.path.join(os.path.dirname(__file__),"..","..","..","..","share","pgu","themes",name))
         dnames.append(os.path.join(os.path.dirname(__file__),"..","..","..","..","..","share","pgu","themes",name))
         dnames.append(os.path.join(os.path.dirname(__file__),"..","..","share","pgu","themes",name)) 
