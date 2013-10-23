@@ -2,9 +2,9 @@
 # -*- coding: UTF-8 -*-
 
 import pygame
-import constants as const
 from pgu import gui
-import global_vars as g
+from medusa.client import constants as const
+from medusa.client import global_vars as g
 
 class LoginControl(gui.Table):
     def __init__(self, **params):

@@ -2,11 +2,13 @@
 # -*- coding: UTF-8 -*-
 
 import pygame
-import constants as const
-from render import RenderEngine
-from menu import login
+
 from twisted.internet import reactor
-import global_vars as g
+
+from medusa.client.menu import login
+from medusa.client import global_vars as g
+from medusa.client import constants as const
+from medusa.client.render import RenderEngine
 
 class Engine:
 
