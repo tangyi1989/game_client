@@ -9,8 +9,6 @@ from medusa.client.menu import login
 from medusa.client import global_vars as g
 from medusa.client import constants as const
 from medusa.client.render import RenderEngine
-from medusa.network.client import Client
-from medusa.network.datahandler import DataHandler
 
 class Engine:
 
@@ -24,10 +22,7 @@ class Engine:
     def start(self):
         self.set_state(const.MENU_LOGIN)
         self.game_loop()
-	self.handler = DataHandler() #数据处理器
-	self.client = Client(self.handler)
-	self.client.start(ip = g.game_ip, port = g.game_port)
-        #reactor.run()
+        reactor.run()
 
     def game_loop(self):
         if g.game_state == const.MENU_LOGIN:
@@ -50,3 +45,4 @@ class Engine:
     def quit_game(self):
         reactor.stop()
         pygame.quit()
+

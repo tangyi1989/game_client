@@ -5,7 +5,10 @@ import pygame
 from pgu import gui
 from medusa.client import constants as const
 from medusa.client import global_vars as g
-from medusa.proto import game_pb2
+
+from medusa.network.client import Client
+from medusa.network.datahandler import DataHandler
+#from medusa.proto import game_pb2
 
 class LoginControl(gui.Table):
     def __init__(self, **params):
@@ -20,15 +23,21 @@ class LoginControl(gui.Table):
         self.td(gui.Spacer(0, 30))
 
         self.tr()
+        self.td(gui.Input(name="username", value="username"))
+
+        self.tr()
+        self.td(gui.Password(name="password", value="password"))
+
+        self.tr()
+        self.td(gui.Spacer(0, 30))
+
+        self.tr()
         btn = gui.Button(u"进入游戏", width=120, height=30)
         btn.connect(gui.CLICK, self.access_game, None)
         self.td(btn)
 
     def access_game(self, btn):
-	login_packet = game_pb2.Login()
-	login_packet.name = 'tang'
-	login_packet.password = 'tangwanwan'
-	self.sendLine(encode(101, login_packet))
+        self.engine.do_login()
         g.game_engine.set_state(const.INGAME)
 
 
@@ -59,3 +68,10 @@ class MenuLogin(object):
 
     def _handle_event(self, event):
         self.app.event(event)
+
+    def do_login(self):
+        self.username = self.login_ctrl.value.items()[0][1]
+        self.password = self.login_ctrl.value.items()[1][1]
+        self.handler = DataHandler() #数据处理器
+        self.client = Client(self.handler)
+        self.client.start(ip = g.game_ip, port = g.game_port)
