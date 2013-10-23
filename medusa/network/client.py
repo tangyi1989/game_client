@@ -24,7 +24,7 @@ class Client():
 		reactor.run()
 	
 	def stop(self):
-		pass
+		reactor.stop()
 
 	def sendData(self, cmd, data):
 		print data
@@ -77,5 +77,5 @@ class gameClientProtocol(LineReceiver):
                 log(" -> " + data)
 		self.factory.handler.handle(data)
 
-       	def sendData(self, encodeData):
+	def sendData(self, encodeData):
                 self.sendLine(encodeData)
