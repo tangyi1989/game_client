@@ -4,13 +4,16 @@
 import sys
 import engine
 import pygame
-import global_vars as g
+from medusa.client import global_vars as g
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
 pygame.display.set_caption(g.GAME_TITLE)
 g.screen_surface = pygame.display.set_mode((g.SCREEN_WIDTH, g.SCREEN_HEIGHT))
 
-if __name__ == '__main__':
+def start():
     g.game_engine = engine.Engine()
     g.game_engine.start()
+
+if __name__ == '__main__':
+    start()

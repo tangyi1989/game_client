@@ -1,0 +1,13 @@
+#*_* coding=utf8 *_*
+#!/usr/bin/env python
+
+"""
+客户端启动脚本
+
+作者：唐万万
+时间：2013-10-24
+"""
+
+from medusa.client import game
+
+game.start()

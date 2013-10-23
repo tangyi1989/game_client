@@ -6,8 +6,7 @@ from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor, error
 
 from packet import *
-from utils.utils import *
-from proto import game_pb2
+from medusa.proto import game_pb2
 
 class Client():
 	'''
@@ -24,7 +23,7 @@ class Client():
 		reactor.run()
 	
 	def stop(self):
-		pass
+		reactor.stop()
 
 	def sendData(self, cmd, data):
 		print data
@@ -37,7 +36,7 @@ class gameClientFactory(ClientFactory):
 		self.handler = handler
 
         def startedConnecting(self, connector):
-                log("Connecting to server....")
+                print ("Connecting to server....")
 
         def buildProtocol(self, addr):
                 return self.protocol
@@ -48,7 +47,7 @@ class gameClientFactory(ClientFactory):
         def clientConnectionLost(self, connector, reason):
                 print reason.getErrorMessage()
                 try:
-                        log("Disconnection from game server")
+                    print ("Disconnection from game server")
                 except error.ReactorNotRunning:
                		pass
 
@@ -66,16 +65,16 @@ class gameClientProtocol(LineReceiver):
         	login_packet.password = 'tangwanwan'
         	#self.transport.write(encode(101, login_packet))
 		self.sendLine(encode(101, login_packet))
-                log("Connecton established to server")
+                print ("Connecton established to server")
 
         def dataReceived(self, data):
                 '''
                 这里开始将接收到的数据传递给protocol去解析,
                 并且对解析到的数据进行handle
                 '''
-                log("Recevie data from server")
-                log(" -> " + data)
+                print ("Recevie data from server")
+                print (" -> " + data)
 		self.factory.handler.handle(data)
 
-       	def sendData(self, encodeData):
+	def sendData(self, encodeData):
                 self.sendLine(encodeData)
