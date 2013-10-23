@@ -29,3 +29,8 @@ gui_surface = pygame.Surface((800, 600))
 
 # 游戏状态
 game_state = constants.MENU_LOGIN
+
+# 游戏IP
+game_ip = '127.0.0.1'
+# 游戏端口
+game_port = 8888

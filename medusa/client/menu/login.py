@@ -5,6 +5,7 @@ import pygame
 from pgu import gui
 from medusa.client import constants as const
 from medusa.client import global_vars as g
+from medusa.proto import game_pb2
 
 class LoginControl(gui.Table):
     def __init__(self, **params):
@@ -24,6 +25,10 @@ class LoginControl(gui.Table):
         self.td(btn)
 
     def access_game(self, btn):
+	login_packet = game_pb2.Login()
+	login_packet.name = 'tang'
+	login_packet.password = 'tangwanwan'
+	self.sendLine(encode(101, login_packet))
         g.game_engine.set_state(const.INGAME)
 
 
