@@ -5,7 +5,7 @@ from twisted.internet.protocol import Protocol, Factory, ClientFactory
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor, error
 
-from medusa.utils.packet import *
+from packet import *
 from medusa.proto import game_pb2
 
 class Client():
