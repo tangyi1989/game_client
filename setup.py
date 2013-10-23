@@ -8,15 +8,15 @@
 """
 
 import setuptools
+from setuptools import find_packages
 
-requirements = ['PyQt4']
 
 setuptools.setup(
     name="medusa",
     version="2013.9",
     author="TangYi",
     description="Watch our service.",
-    packages=['medusa', 'pgu'],
+    packages=find_packages(),
+    install_requires=['pygame', 'pgu', 'twisted', 'PyQt4'],
     scripts=['bin/medusa_map_editor', 'bin/medusa_client'],
-    install_requires=requirements,
 )
