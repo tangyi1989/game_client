@@ -8,7 +8,7 @@ try:
 except:
     from StringIO import StringIO
 
-from medusa.utils.fileds import FieldsSerializer
+from medusa.utils.fields import FieldsSerializer
 from medusa.map.map import TiledMap, MapTile, \
     MapElement, MapJumpPoint
 

@@ -3,6 +3,7 @@
 
 from PyQt4 import QtGui
 from medusa.map import map as tiled_map
+from medusa.map import serialize as map_serialize
 from medusa.map_editor.widget.editor import EditorWidget
 from medusa.map_editor.window import MainWindow
 
@@ -32,7 +33,7 @@ class MapController(object):
 
         if map_file_path:
             try:
-                self.tiled_map = tiled_map.TiledMapSerializer().read_from_file(
+                self.tiled_map = map_serialize.TiledMapSerializer().read_from_file(
                     map_file_path)
             except Exception as e:
                 message = u"打开地图文件时出现异常：%s" % e.message
@@ -62,7 +63,7 @@ class MapController(object):
             self.view, u"保存地图文件", "", ".mcm")
         if file_path:
             try:
-                tiled_map.TiledMapSerializer().dump_to_file(
+                map_serialize.TiledMapSerializer().dump_to_file(
                     self.tiled_map, file_path)
             except Exception as e:
                 message = u"保存地图文件时出现异常：%s" % e.message
