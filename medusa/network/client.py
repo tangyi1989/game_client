@@ -5,35 +5,27 @@ from twisted.internet.protocol import Protocol, Factory, ClientFactory
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor, error
 
-from medusa.utils.packet import *
-from medusa.proto import game_pb2
+from gui.dialogs import alertMessageDialog
+
+from packet import *
 
 
 class Client():
-
     '''
     客户端类
     '''
-
     def __init__(self, handler):
         self.handler = handler
         self.factory = gameClientFactory(handler)
-
+		
     def start(self, **params):
-        self.connector = reactor.connectTCP(
-            params['ip'], params['port'], self.factory)
-        reactor.run()
+        self.connector = reactor.connectTCP(params['ip'], params['port'], self.factory)
 
-    def stop(self):
-        reactor.stop()
-        
     def sendData(self, cmd, data):
         print data
-        #self.factory.protocol.transport.write(encode(cmd, data))
-
+		#self.factory.protocol.transport.write(encode(cmd, data))
 
 class gameClientFactory(ClientFactory):
-
     def __init__(self, handler):
         self.protocol = gameClientProtocol(self)
         self.handler = handler
@@ -45,7 +37,9 @@ class gameClientFactory(ClientFactory):
         return self.protocol
 
     def clientConnectionFailed(self, connector, reason):
-        print reason.getErrorMessage()
+        errorMsg = reason.getErrorMessage().split(':')
+        alertMessageDialog('Unable to connect to server: ' + errorMsg[1] + errorMsg[2], 'An error occured')
+
 
     def clientConnectionLost(self, connector, reason):
         print reason.getErrorMessage()
