@@ -1,17 +1,14 @@
 # *_* coding=utf8 *_*
 #!/usr/bin/env python
 
-import os
-from pyglet import font
-
-from cocos.director import director
+from medusa.client import menu
 from cocos.scene import Scene
 from cocos.scenes.transitions import *
 from cocos.menu import *
 
 from HUD import *
-from twisted.internet import protocol, reactor
-from threading import Thread
+from twisted.internet import reactor
+from cocos.director import director
 
 class MainMenu(Menu):
 
@@ -56,14 +53,9 @@ class MainMenu(Menu):
 
 
 def start():
-    data_path = os.path.join(os.path.dirname(__file__), "data")
-    pyglet.resource.path.append(data_path)
-    pyglet.resource.reindex()
-    font.add_directory(data_path)
-
     director.init(width=800, height=600, caption="Medusa Client")
     scene = Scene()
-    scene.add(MainMenu(), z=1)
+    scene.add(menu.MainMenu(), z=1)
     director.run(scene)
 
 if __name__ == '__main__':

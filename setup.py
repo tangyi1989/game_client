@@ -17,6 +17,6 @@ setuptools.setup(
     author="TangYi",
     description="Watch our service.",
     packages=find_packages(),
-    install_requires=['pygame', 'pgu', 'twisted', 'PyQt4'],
+    install_requires=['pygame', 'pgu', 'twisted'],
     scripts=['bin/medusa_map_editor', 'bin/medusa_client'],
 )
