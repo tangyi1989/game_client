@@ -6,7 +6,7 @@ from cocos.menu import *
 from cocos.scenes.transitions import *
 from cocos.director import director
 
-from medusa.client import scene
+from medusa.client.main import scene
 
 class MainMenu(Menu):
 

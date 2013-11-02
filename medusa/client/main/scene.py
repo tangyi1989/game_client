@@ -5,9 +5,9 @@
 
 from cocos.scene import Scene
 
-from medusa.client import view
-from medusa.client import model
-from medusa.client import control
+from medusa.client.main import view
+from medusa.client.main import model
+from medusa.client.main import control
 
 
 class GameScene(Scene):

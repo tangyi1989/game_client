@@ -1,7 +1,7 @@
 # *_* coding=utf8 *_*
 #!/usr/bin/env python
 
-from resource import *
+from medusa.client.resource import *
 from cocos.layer import Layer, glPushMatrix, glPopMatrix
 
 class BackgroundLayer(Layer):

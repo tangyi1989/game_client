@@ -1,10 +1,10 @@
 # *_* coding=utf8 *_*
 #!/usr/bin/env python
 
-#import weakref
 import pyglet
-from cocos.director import director
+from medusa.client import config
 
+CONF = config.CONF
 
 class Player(object):
 
@@ -59,13 +59,19 @@ class Map(object):
         # 地图在左上角的其实坐标
         self.map_size = (2000, 2000)
 
+    def set_tiled_map(self, tiled_map):
+        pass
+
+    def load_tiled_map(self, map_id):
+        pass
+
 
 class Cameral(object):
 
     """ 一架悬挂在空中的照相机 """
 
     def __init__(self, map_size, central_player=None):
-        self.window_size = director.get_window_size()
+        self.window_size = (CONF.window_width, CONF.window_height)
         self.map_size = map_size
         self.central_player = central_player
 
