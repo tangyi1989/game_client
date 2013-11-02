@@ -31,9 +31,8 @@ class GameCtrl(Layer):
     def on_key_release(self, k, m):
         # 停止玩家移动
         if GameCtrl.MOVE_KEY.has_key(k):
-            self.model.stop_player_move()
             self.player_moving = False
 
     def step(self, dt):
         if self.player_moving:
-            self.model.player_move()
+            self.model.player.move()

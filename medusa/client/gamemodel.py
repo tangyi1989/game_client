@@ -10,42 +10,45 @@ class Player(object):
 
     """ 代表玩家 """
 
-    def __init__(self, name=u"不知火舞"):
+    def __init__(self, current_map=None, name=u"不知火舞"):
         self.name = name
         self.speed = 15
         self.location = (30, 30)
         self.direct = (0, 1)
-
+        self.current_map = current_map
         self.image_index = 0
+
+    def access_new_map(self, new_map):
+        """ 玩家进入新地图 """
+        self.location = (30, 30)
+        self.current_map = new_map
 
     def set_direct(self, x, y):
         """ 设置玩家的方向 """
         self.direct = [x, y]
 
-    def move_to(self, x, y):
+    def move(self):
         """ 玩家移动 """
-        if self.location == (x, y):
+        if self.current_map is None:
             return
 
-        self.image_index += 1
-        if self.image_index > 7:
-            self.image_index = 0
-
-        self.location = (x, y)
-
-    def stop(self):
-        """ 玩家停止移动 """
-        pass
-
-    def __repr__(self):
-        return 'Location : %s, image_index : %s' % (self.location, self.image_index)
-
-    def get_next_location(self):
-        """ 获取下一个时刻玩家的位置 """
-        return (
+        next_x, next_y = (
             self.location[0] + self.speed * self.direct[0],
             self.location[1] + self.speed * self.direct[1]
         )
+        if next_x >= 0 and next_y >= 0 and \
+                next_x < self.current_map.map_size[0] and \
+                next_y < self.current_map.map_size[1]:
+
+            self.image_index += 1
+            if self.image_index > 7:
+                self.image_index = 0
+
+            self.location = (next_x, next_y)
+
+    def __repr__(self):
+        return 'Location : %s, image_index : %s' % \
+            (self.location, self.image_index)
 
 
 class Map(object):
@@ -81,9 +84,9 @@ class Cameral(object):
 
         origin_position = (
             get_cameral_origin_pos(self.central_player.location[0],
-                                  self.map_size[0], self.window_size[0]),
+                                   self.map_size[0], self.window_size[0]),
             get_cameral_origin_pos(self.central_player.location[1],
-                                  self.map_size[1], self.window_size[1])
+                                   self.map_size[1], self.window_size[1])
         )
 
         return origin_position
@@ -93,22 +96,8 @@ class GameModel(pyglet.event.EventDispatcher):
 
     def __init__(self):
         super(GameModel, self).__init__()
-        self.player = Player()
         self.map = Map()
+        self.player = Player(self.map)
         self.cameral = Cameral(self.map.map_size, self.player)
-
-    def player_move(self):
-        """ 玩家开始移动 """
-        player_x, player_y = self.player.get_next_location()
-        if player_x >= 0 and player_y >= 0 and \
-                player_x < self.map.map_size[0] and \
-                player_y < self.map.map_size[1]:
-            self.player.move_to(player_x, player_y)
-        else:
-            self.player.stop()
-
-    def stop_player_move(self):
-        """ 玩家停止移动 """
-        self.player.stop()
 
 GameModel.register_event_type('on_move')
