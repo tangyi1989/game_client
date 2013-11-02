@@ -4,6 +4,10 @@
 from cocos.layer import Layer
 from pyglet.window import key
 
+from threading import Thread
+from twisted.internet import reactor
+from medusa.network.client import Client
+
 
 class GameCtrl(Layer):
     is_event_handler = True
@@ -20,6 +24,13 @@ class GameCtrl(Layer):
         self.model = model
         self.player_moving = False
         self.schedule(self.step)
+
+    def init_network(self):
+        # network connection 
+        self.client = Client(self.msg_handler)
+        self.client.start(ip='127.0.0.1', port=80)
+        Thread(target=reactor.run, kwargs={'installSignalHandlers': 0}).start()
+
 
     def on_key_press(self, k, m):
         # 开始进行玩家移动

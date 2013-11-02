@@ -8,7 +8,6 @@ from cocos.director import director
 
 CONF = config.CONF
 
-
 def start():
     director.init(width=CONF.window_width,
                   height=CONF.window_height,

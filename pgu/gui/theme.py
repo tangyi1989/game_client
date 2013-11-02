@@ -77,7 +77,7 @@ class Theme:
         dnames.append(os.path.join(os.path.dirname(__file__),"..","..","share","pgu","themes",name)) 
         for dname in dnames:
             if os.path.isdir(dname): break
-
+        import pdb;pdb.set_trace()
         if not os.path.isdir(dname): 
             raise Exception('could not find theme '+name)
 
