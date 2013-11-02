@@ -10,7 +10,8 @@ from cocos.scenes.transitions import *
 from cocos.menu import *
 
 from HUD import *
-
+from twisted.internet import protocol, reactor
+from threading import Thread
 
 class MainMenu(Menu):
 
@@ -50,6 +51,7 @@ class MainMenu(Menu):
         pass
 
     def on_quit(self):
+        reactor.stop()
         pyglet.app.exit()
 
 
