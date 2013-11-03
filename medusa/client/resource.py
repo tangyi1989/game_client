@@ -7,12 +7,16 @@ from pyglet import font
 
 
 def load():
-    data_path = os.path.join(os.path.dirname(__file__), "data")
-    pyglet.resource.path.append(data_path)
+    root_path = os.path.join(os.path.dirname(__file__), "data")
+
+    pyglet.resource.path.append(os.path.join(root_path, "player_action"))
+    pyglet.resource.path.append(os.path.join(root_path, "maps/images"))
     pyglet.resource.reindex()
-    font.add_directory(data_path)
+
+    font.add_directory(os.path.join(root_path, "font"))
 
 load()
+
 
 class PlayerAction(object):
     actions_up = ['up_1', 'up_2', 'up_3', 'up_4',
