@@ -17,6 +17,6 @@ from medusa.map_editor import controller
 app = QtGui.QApplication(sys.argv)
 
 def start():
-    misc_utils.drop_terminal()
+    # misc_utils.drop_terminal()
     controller.MapController().init()
     app.exec_()

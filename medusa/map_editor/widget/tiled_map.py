@@ -1,8 +1,11 @@
 #*_* coding=utf8 *_*
 #!/usr/bin/env python
 
+
 from PyQt4 import QtCore, QtGui
+
 from medusa.exception import TiledMapIsNone
+from medusa.utils import misc as util_misc
 
 """
 编辑地图区域控件
@@ -10,6 +13,7 @@ from medusa.exception import TiledMapIsNone
 作者：唐万万
 时间：2013-10-23
 """
+
 
 class TiledMapWidget(QtGui.QWidget):
 
@@ -48,7 +52,8 @@ class TiledMapWidget(QtGui.QWidget):
         self.direct_stack = []
         self.repainted = False
 
-        self.init_move_regions()
+        self.move_regions = util_misc.gen_move_regions(
+            self.rect_width, self.rect_height)
         self.init_pixmap()
         self.set_tile_size(20, 20)
 
@@ -69,9 +74,9 @@ class TiledMapWidget(QtGui.QWidget):
         self.grid_mask = None
 
         # 操作层
-        self.operate_layer_pixmap = QtGui.QPixmap(
+        self.assist_layer_pixmap = QtGui.QPixmap(
             self.rect_width, self.rect_height)
-        self.operate_layer_mask = None
+        self.assist_layer_mask = None
 
         # 用于合成然后绘制在屏幕上的 pixmap
         self.buffer_pixmap = QtGui.QPixmap(self.rect_width, self.rect_height)
@@ -81,91 +86,6 @@ class TiledMapWidget(QtGui.QWidget):
         self.connect(
             self.timer, QtCore.SIGNAL("timeout()"), self.timeout_event)
         self.timer.start(self.timer_ms)
-
-    def init_move_regions(self):
-        """
-        初始化移动区域所需数据
-
-        当鼠标位于如下标注的格子中时，地图将会移动。 
-        -------------------------------------
-        |       |                   |       |
-        |(-1,-1)|      (0, -1)      |(1, -1)|
-        |       |                   |       |
-        |-----------------------------------|
-        |       |                   |       |
-        |       |                   |       |
-        |       |                   |       |
-        |(-1, 0)|       (0, 0)      | (1, 0)|
-        |       |                   |       |
-        |       |                   |       |
-        |       |                   |       |
-        |-----------------------------------|
-        |       |                   |       |
-        |(-1, 1)|      (0, 1)       |(1, 1) |
-        |       |                   |       |
-        -------------------------------------
-        """
-
-        region_width = 100
-        self.move_regions = [
-            # 第一行
-            (
-                (0, 0,
-                 region_width, region_width), (-1, -1)
-            ),
-            (
-                (region_width, 0,
-                 self.rect_width - region_width, region_width), (0, -1)
-            ),
-            (
-                (self.rect_width - region_width, 0,
-                 self.rect_width, region_width), (1, -1)
-            ),
-            # 第二行
-            (
-                (0, region_width,
-                 region_width, self.rect_height - region_width), (-1, 0)
-            ),
-            (
-                (region_width, region_width,
-                 self.rect_width - region_width, self.rect_height - region_width), (0, 0)
-            ),
-            (
-                (self.rect_width - region_width, region_width,
-                 self.rect_width, self.rect_height - region_width), (1, 0)
-            ),
-            # 第三行
-            (
-                (0, self.rect_height - region_width,
-                 region_width, self.rect_height), (-1, 1)
-            ),
-            (
-                (region_width, self.rect_height - region_width,
-                 self.rect_width - region_width, self.rect_height), (0, 1)
-            ),
-            (
-                (self.rect_width - region_width, self.rect_height - region_width,
-                 self.rect_width, self.rect_height), (1, 1)
-            )
-        ]
-
-    def get_move_direct(self, cur_x, cur_y):
-        """ 通过鼠标位置，获取需要地图移动的方向 """
-
-        move_direct = (0, 0)
-
-        for move_region in self.move_regions:
-
-            region = move_region[0]
-            direct = move_region[1]
-
-            if cur_x >= region[0] and cur_y >= region[1] \
-                and cur_x < region[2] and cur_y < region[3]:
-
-                move_direct = direct
-                break
-
-        return move_direct
 
     def set_tile_size(self, width, height):
         """ 设置格子尺寸 """
@@ -189,12 +109,12 @@ class TiledMapWidget(QtGui.QWidget):
 
         self.paint_grid()
         self.paint_tiled_layer()
-        self.paint_operate_layer()
+        self.paint_assist_layer()
 
     def set_layer(self, layer):
         self.displayed_tiled_layer = layer
         self.paint_tiled_layer()
-        self.paint_operate_layer()
+        self.paint_assist_layer()
 
     def resize_tiles(self, tile_col, tile_row):
         """ 重置地图的尺寸 """
@@ -261,7 +181,7 @@ class TiledMapWidget(QtGui.QWidget):
     def get_grid_pos(self, cursor_x, cursor_y):
         """ 根据鼠标的位置，获取当前鼠标放置在哪个网格上 """
         pos_x = int(cursor_x / self.tile_width)
-        pos_y = int(cursor_y / self.tile_height)
+        pos_y = int((self.rect_height - cursor_y) / self.tile_height)
 
         return pos_x, pos_y
 
@@ -302,7 +222,7 @@ class TiledMapWidget(QtGui.QWidget):
             return
 
         self.active_grid = grid
-        self.paint_operate_layer()
+        self.paint_assist_layer()
 
     def timeout_event(self):
         """ 定时器事件：用于定时得到鼠标位置信息，然后进行地图的移动。 """
@@ -319,8 +239,9 @@ class TiledMapWidget(QtGui.QWidget):
             grid_pos = self.get_grid_pos(coursor_point.x(), coursor_point.y())
 
             # 地图要移动的方向
-            direct_x, direct_y = self.get_move_direct(cur_x, cur_y)
-            self.move_display_region(direct_x, direct_y)
+            direct_x, direct_y = util_misc.get_move_direct(
+                self.move_regions, cur_x, cur_y)
+            self.move_display_region(direct_x, -direct_y)
 
         self.set_active_grid(grid_pos)
         if self.repainted:
@@ -369,9 +290,9 @@ class TiledMapWidget(QtGui.QWidget):
         painter.drawPixmap(0, 0, self.grid_pixmap)
 
         # 操作层
-        if self.operate_layer_mask:
-            self.operate_layer_pixmap.setMask(self.operate_layer_mask)
-        painter.drawPixmap(0, 0, self.operate_layer_pixmap)
+        if self.assist_layer_mask:
+            self.assist_layer_pixmap.setMask(self.assist_layer_mask)
+        painter.drawPixmap(0, 0, self.assist_layer_pixmap)
 
         painter.end()
 
@@ -407,7 +328,7 @@ class TiledMapWidget(QtGui.QWidget):
                     if filled:
                         painter.fillRect(
                             (x - self.tile_begin_x) * self.tile_width,
-                            (y - self.tile_begin_y) * self.tile_height,
+                            self.rect_height - (y - self.tile_begin_y + 1) * self.tile_height,
                             self.tile_width, self.tile_height, layer_color)
 
         except TiledMapIsNone:
@@ -419,16 +340,16 @@ class TiledMapWidget(QtGui.QWidget):
 
             if self.tiled_map:
                 self.set_alpha_channel(self.tiled_layer_pixmap, 125)
-                
+
             self.repainted = True
 
-    def paint_operate_layer(self):
+    def paint_assist_layer(self):
         """ 绘制操作层 """
 
         try:
             background_color = QtGui.QColor(0x000000)
             painter = QtGui.QPainter()
-            painter.begin(self.operate_layer_pixmap)
+            painter.begin(self.assist_layer_pixmap)
             painter.fillRect(
                 0, 0, self.rect_width, self.rect_height, background_color)
 
@@ -441,7 +362,8 @@ class TiledMapWidget(QtGui.QWidget):
             if self.active_grid is not None:
 
                 begin_x = self.active_grid[0] * self.tile_width
-                begin_y = self.active_grid[1] * self.tile_height
+                begin_y = self.rect_height - \
+                    (self.active_grid[1] + 1) * self.tile_height
 
                 painter.drawRect(
                     begin_x, begin_y, self.tile_width, self.tile_height)
@@ -460,7 +382,7 @@ class TiledMapWidget(QtGui.QWidget):
             pass
         finally:
             painter.end()
-            self.operate_layer_mask = self.operate_layer_pixmap.createMaskFromColor(
+            self.assist_layer_mask = self.assist_layer_pixmap.createMaskFromColor(
                 background_color)
 
             self.repainted = True
@@ -490,14 +412,17 @@ class TiledMapWidget(QtGui.QWidget):
                 tile_y_num = self.tile_y_num
 
             end_x = tile_x_num * self.tile_width
-            end_y = tile_y_num * self.tile_height
+            begin_y = self.rect_height - (tile_y_num * self.tile_height)
 
             for y in xrange(0, tile_y_num + 1):
                 for x in xrange(0, tile_x_num + 1):
+                    # 纵向的线
                     painter.drawLine(
-                        x * self.tile_width, 0, x * self.tile_width, end_y)
+                        x * self.tile_width, begin_y, x * self.tile_width, self.rect_height)
+                    # 横向的线
                     painter.drawLine(
-                        0, y * self.tile_height, end_x, y * self.tile_height)
+                        0, self.rect_height - y * self.tile_height,
+                        end_x, self.rect_height - y * self.tile_height)
 
         except TiledMapIsNone:
             pass
@@ -509,9 +434,11 @@ class TiledMapWidget(QtGui.QWidget):
 
     def paint_map_image(self):
         """ 绘制地图背景图片 """
+
         if self.map_image is None:
             return
 
+        image_height = self.map_image.height()
         background_color = QtGui.QColor(0x000000)
 
         painter = QtGui.QPainter()
@@ -520,9 +447,10 @@ class TiledMapWidget(QtGui.QWidget):
         painter.fillRect(
             0, 0, self.rect_width, self.rect_height, background_color)
         paint_begin_x = self.tile_begin_x * self.tile_width
-        paint_begin_y = self.tile_begin_y * self.tile_height
-        painter.drawImage(-paint_begin_x, -paint_begin_y, self.map_image)
+        paint_begin_y = self.rect_height - \
+            (image_height - self.tile_begin_y * self.tile_height)
+
+        painter.drawImage(-paint_begin_x, paint_begin_y, self.map_image)
 
         painter.end()
         self.repainted = True
-

@@ -5,6 +5,7 @@ from medusa.client.resource import *
 from cocos.layer import Layer, glPushMatrix, glPopMatrix
 
 class BackgroundLayer(Layer):
+    """ 背景层：绘制地图背景 """
 
     def __init__(self, model):
         super(BackgroundLayer, self).__init__()
@@ -22,6 +23,7 @@ class BackgroundLayer(Layer):
 
 
 class PlayerLayer(Layer):
+    """ 玩家层：绘制地图上的玩家 """
 
     PLAYER_IAMGES = [
         ((0, 1), PlayerAction.images_up),
@@ -34,7 +36,7 @@ class PlayerLayer(Layer):
         super(PlayerLayer, self).__init__()
         self.model = model
 
-    def get_player_iamge(self, player):
+    def get_player_image(self, player):
         player_image = None
         for (direct, image) in PlayerLayer.PLAYER_IAMGES:
             if direct[0] == player.direct[0] and \
@@ -55,13 +57,18 @@ class PlayerLayer(Layer):
 
         x = player.location[0] - orgin_position[0]
         y = player.location[1] - orgin_position[1]
-        player_image = self.get_player_iamge(player)
+        player_image = self.get_player_image(player)
 
         if player_image is not None:
             player_image[player.image_index].blit(x, y)
 
         glPopMatrix()
 
+
+class AssistLayer(Layer):
+    """ 辅助层 """
+    def __init__(self, model):
+        self.model = model
 
 class GameLayer(Layer):
 
@@ -72,5 +79,3 @@ class GameLayer(Layer):
 
         self.add(self.background_layer)
         self.add(self.player_layer)
-
-
