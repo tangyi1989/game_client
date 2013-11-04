@@ -2,7 +2,7 @@
 #!/usr/bin/env python
 
 from medusa.client import config
-from medusa.client import menu
+from medusa.client.menu import MainMenu
 from cocos.scene import Scene
 from cocos.director import director
 
@@ -13,7 +13,7 @@ def start():
                   height=CONF.window_height,
                   caption=CONF.caption)
     scene = Scene()
-    scene.add(menu.MainMenu(), z=1)
+    scene.add(MainMenu(), z=1)
     director.run(scene)
 
 if __name__ == '__main__':
