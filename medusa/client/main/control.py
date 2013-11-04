@@ -24,6 +24,7 @@ class GameCtrl(Layer):
         self.model = model
         self.player_moving = False
         self.schedule(self.step)
+        self.load_map(1)
 
     def init_network(self):
         # network connection 
@@ -31,6 +32,8 @@ class GameCtrl(Layer):
         self.client.start(ip='127.0.0.1', port=80)
         Thread(target=reactor.run, kwargs={'installSignalHandlers': 0}).start()
 
+    def load_map(self, map_id):
+        self.model.load_map(map_id)
 
     def on_key_press(self, k, m):
         # 开始进行玩家移动

@@ -37,8 +37,15 @@ class EditorWidget(QtGui.QWidget):
         # 右边的各种按钮和Map属性
         map_name = QtGui.QLabel(u'地图名称')
         self.map_name_edit = QtGui.QLineEdit()
+        self.connect(self.map_name_edit,
+            QtCore.SIGNAL("textChanged(QString)"),
+            self.on_map_name_edit_changed)
+
         map_picture = QtGui.QLabel(u'地图图片名称')
         self.map_picture_edit = QtGui.QLineEdit()
+        self.connect(self.map_picture_edit, 
+            QtCore.SIGNAL("textChanged(QString)"),
+            self.on_map_image_edit_changed)
 
         tile_col = QtGui.QLabel(u'格子行数')
         self.tile_col_box = QtGui.QSpinBox()
@@ -102,6 +109,18 @@ class EditorWidget(QtGui.QWidget):
         tile_width = self.tile_width_box.value()
         tile_height = self.tile_height_box.value()
         self.tiled_map_widget.set_tile_size(tile_width, tile_height)
+
+    def on_map_image_edit_changed(self):
+        """ 地图图片编辑控件文字发生改变 """
+        map_picture = self.map_picture_edit.text()
+        if self.tiled_map is not None:
+            self.tiled_map.map_picture = unicode(map_picture)
+
+    def on_map_name_edit_changed(self):
+        """ 地图名称编辑控件文字发生改变 """
+        map_name = self.map_name_edit.text()
+        if self.tiled_map is not None:
+            self.tiled_map.map_name = unicode(map_name)
 
     def on_changed_tiled_map(self, tiled_map):
         self.tiled_map = tiled_map

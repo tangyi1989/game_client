@@ -109,7 +109,7 @@ class FieldsSerializer(object):
                 if convert_option == "raw":
                     value = field_data
                 elif convert_option == "gb2312":
-                    value = field_data.decode('gb2312').rstrip()
+                    value = field_data.decode('gb2312').split('\x00')[0]
                 else:
                     raise exception.UnsupportConvertOption
 
