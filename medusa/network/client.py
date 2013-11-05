@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # coding:utf-8
 
-from twisted.internet.protocol import Protocol, Factory, ClientFactory
+from twisted.internet.protocol import ClientFactory
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor, error
 
 
-from packet import *
+from packet import encode, decode
+
 
 
 class Client():
@@ -37,7 +38,6 @@ class gameClientFactory(ClientFactory):
     def clientConnectionFailed(self, connector, reason):
         errorMsg = reason.getErrorMessage().split(':')
         print errorMsg
-
 
 
     def clientConnectionLost(self, connector, reason):

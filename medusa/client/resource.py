@@ -11,7 +11,6 @@ def init():
 
     pyglet.resource.path.append(os.path.join(root_path, "player_action"))
     pyglet.resource.path.append(os.path.join(root_path, "maps/images"))
-    print os.path.join(root_path, "maps/images")
     pyglet.resource.reindex()
 
     font.add_directory(os.path.join(root_path, "font"))

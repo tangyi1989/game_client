@@ -39,13 +39,15 @@ class Player(object):
             self.location[0] + self.speed * self.direct[0],
             self.location[1] + self.speed * self.direct[1]
         )
-        if next_x >= 0 and next_y >= 0 and \
-                next_x < self.current_map.map_size[0] and \
-                next_y < self.current_map.map_size[1]:
 
-            self.image_index += 1
-            if self.image_index > 7:
-                self.image_index = 0
+        self.image_index += 1
+        if self.image_index > 7:
+            self.image_index = 0
+
+        if next_x >= 0 and next_y >= 0 and \
+                next_x + 30 < self.current_map.map_size[0] and \
+                next_y + 30 < self.current_map.map_size[1]:
+
 
             self.location = (next_x, next_y)
 

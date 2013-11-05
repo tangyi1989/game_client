@@ -2,13 +2,14 @@
 #!/usr/bin/env python
 
 import pyglet
-from cocos.menu import *
-from cocos.scenes.transitions import *
+from cocos import menu 
+
+from cocos.scenes.transitions import FlipAngular3DTransition
 from cocos.director import director
 
 from medusa.client.main import scene
 
-class MainMenu(Menu):
+class MainMenu(menu.Menu):
 
     def __init__(self):
         super(MainMenu, self).__init__("MEDUSA GAME")
@@ -27,12 +28,12 @@ class MainMenu(Menu):
 
         items = []
 
-        items.append(MenuItem('Login', self.login_game))
-        items.append(MenuItem('Register', self.register_game))
-        items.append(MenuItem('More Game', self.more_game))
-        items.append(MenuItem('Quit', self.on_quit))
+        items.append(menu.MenuItem('Login', self.login_game))
+        items.append(menu.MenuItem('Register', self.register_game))
+        items.append(menu.MenuItem('More Game', self.more_game))
+        items.append(menu.MenuItem('Quit', self.on_quit))
 
-        self.create_menu(items, shake(), shake_back())
+        self.create_menu(items, menu.shake(), menu.shake_back())
 
     def login_game(self):
         game_scene = scene.GameScene()
