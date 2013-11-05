@@ -14,7 +14,8 @@ class Config(object):
         return self.config_dict[key]
 
 medusa_config = [
-    ("data_path", os.path.join(os.path.dirname(__name__) , "data")),
+    ("data_path", os.path.join(os.path.dirname(__file__) , "data")),
+    ("map_path", os.path.join(os.path.dirname(__file__) , "data/maps")),
     ("caption", "Medusa Client"),
     ("window_width", 800),
     ("window_height", 600),

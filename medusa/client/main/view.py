@@ -13,6 +13,9 @@ class BackgroundLayer(Layer):
         self.img = pyglet.resource.image('background.jpg')
 
     def draw(self):
+        if not self.model.loaded:
+            return
+
         glPushMatrix()
         self.transform()
         cameral = self.model.cameral
@@ -48,6 +51,9 @@ class PlayerLayer(Layer):
 
     def draw(self):
 
+        if not self.model.loaded:
+            return
+
         glPushMatrix()
         self.transform()
 
@@ -66,9 +72,20 @@ class PlayerLayer(Layer):
 
 
 class AssistLayer(Layer):
-    """ 辅助层 """
+    """ 辅助层:画出地图方格，坐标等信息，用于帮助调试程序 """
     def __init__(self, model):
         self.model = model
+
+    def draw(self):
+
+        if not self.model.loaded:
+            return
+
+        glPushMatrix()
+        self.transform()
+
+        glPopMatrix()
+
 
 class GameLayer(Layer):
 

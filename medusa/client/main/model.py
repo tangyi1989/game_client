@@ -1,8 +1,11 @@
 # *_* coding=utf8 *_*
 #!/usr/bin/env python
 
+import os
 import pyglet
 from medusa.client import config
+from medusa.client import resource
+from medusa.map.serialize import TiledMapSerializer
 
 CONF = config.CONF
 
@@ -55,16 +58,24 @@ class Map(object):
 
     """ 地图信息和地图状态 """
 
-    def __init__(self):
+    def __init__(self, tiled_map):
+        self.tiled_map = tiled_map
+        self.image = self.load_map_image()
         # 地图在左上角的其实坐标
         self.map_size = (2000, 2000)
 
-    def set_tiled_map(self, tiled_map):
-        pass
+    def load_map_image(self):
+        image_name = self.tiled_map.map_picture
+        return resource.load_image(image_name)
 
-    def load_tiled_map(self, map_id):
-        pass
 
+    @classmethod
+    def load(cls, map_id):
+        """ 载入地图 """
+        mcm_file = '%08x.mcm' % map_id
+        mcm_path = os.path.join(CONF.map_path, 'mcm/%s' % mcm_file)
+        tiled_map = TiledMapSerializer().read_from_file(mcm_path)
+        return cls(tiled_map)
 
 class Cameral(object):
 
@@ -102,8 +113,15 @@ class GameModel(pyglet.event.EventDispatcher):
 
     def __init__(self):
         super(GameModel, self).__init__()
-        self.map = Map()
+        self.loaded = False
+        self.map = None
+        self.player = None
+        self.cameral = None
+
+    def load_map(self, map_id):
+        self.map = Map.load(map_id)
         self.player = Player(self.map)
         self.cameral = Cameral(self.map.map_size, self.player)
+        self.loaded = True
 
 GameModel.register_event_type('on_move')

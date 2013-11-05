@@ -6,21 +6,24 @@ import pyglet
 from pyglet import font
 
 
-def load():
+def init():
     root_path = os.path.join(os.path.dirname(__file__), "data")
 
     pyglet.resource.path.append(os.path.join(root_path, "player_action"))
     pyglet.resource.path.append(os.path.join(root_path, "maps/images"))
+    print os.path.join(root_path, "maps/images")
     pyglet.resource.reindex()
 
     font.add_directory(os.path.join(root_path, "font"))
 
-load()
+def load_image(image_name):
+  return pyglet.resource.image(image_name)
 
+init()
 
 class PlayerAction(object):
     actions_up = ['up_1', 'up_2', 'up_3', 'up_4',
-                  'up_5', 'up_6', 'up_7', 'up_8']       # don't remove
+                  'up_5', 'up_6', 'up_7', 'up_8']
     actions_down = ['down_1', 'down_2', 'down_3', 'down_4',
                     'down_5', 'down_6', 'down_7', 'down_8']
     actions_left = ['left_1', 'left_2', 'left_3', 'left_4',
