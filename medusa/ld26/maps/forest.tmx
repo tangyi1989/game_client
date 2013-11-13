@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" orientation="orthogonal" width="40" height="50" tilewidth="32" tileheight="32">
+ <tileset firstgid="1" name="tileset_grassland" tilewidth="32" tileheight="32">
+  <image source="tileset_grassland.png" width="640" height="640"/>
+  <tile id="14">
+   <properties>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+  <tile id="15">
+   <properties>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+  <tile id="29">
+   <properties>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+  <tile id="34">
+   <properties>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+  <tile id="50">
+   <properties>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+  <tile id="54">
+   <properties>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+  <tile id="71">
+   <properties>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+  <tile id="74">
+   <properties>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+  <tile id="75">
+   <properties>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+  <tile id="100">
+   <properties>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+  <tile id="120">
+   <properties>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+  <tile id="138">
+   <properties>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+  <tile id="158">
+   <properties>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+  <tile id="217">
+   <properties>
+    <property name="door" value="True"/>
+    <property name="door_destination" value="13 45"/>
+    <property name="door_map" value="grassland"/>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+  <tile id="300">
+   <properties>
+    <property name="door" value="True"/>
+    <property name="door_destination" value="10 12"/>
+    <property name="door_map" value="falaise"/>
+    <property name="passable" value="True"/>
+   </properties>
+  </tile>
+ </tileset>
+ <layer name="ground1" width="40" height="50">
+  <data encoding="base64" compression="zlib">
+   eJzt10sKwjAURuF0IBUX0d25CJfpWycOBN86cFLw7ckC1D5uNOAP/WZpODTllmbOuaykLnroY4AhRhhjgqnhmrJt3gJLrLDGBlvssMfBcE2VvhPOuOCKG+54wCVcid2aKn1FzQv4dE/IPhERERER+a4cjcD/IXWkaEbed4yg412fP99ZBC2v+rzcYK92wL7UYK9OwL5Y30GrZxeyr6X5Uqsv9u+HxWwJ2ffrBvX9b1/Ms09ERKSqJ6RbMrk=
+  </data>
+ </layer>
+ <layer name="ground2" width="40" height="50">
+  <data encoding="base64" compression="zlib">
+   eJy9mLluFEEQhhvYkGPtxUAIWLY5I3NEHCECEgsJcTnl8CNwRbYTxE1gNkGYM1gsrW1ugvFK3l0hBDkSCAkehCpttabcrj5mptcjfZqje7r/rq6urpkJpdREDiaB8grwuABa41fgewEN+P5v4FtkfVXgF7WN/AX+AT/oHKKNv/8nsj5uw25QiaCv2gVd/XQeiqBvBti7qjv0FND1hrT5bDFn3B/LYMcBS5814ZqDzxeAhtDmSeO+Zem7LjwztZv2m6Q+E2BcpXFugT2vW3RlZdFTXhHsV2XjmmLPsrQbiyGyX9WYT90/f1YPoOhaNekl+82QTtOfEvZs0aAu3Lv0ZtE/TOdBmuMG6SziO5L+uqN+ljnG81pgHbBeyesoC/OCTfO2VaHzVmAbsL1AW5o206jhsSC0nY3MfvuA/cCBCPq0Rm1LPGyxwKV7h+qsC/7suKPPYUeZz5Y1le6FvFzrtuUZuC60f5j+YruWynwax0mDmeP68oxTquMfY0qOH654J61TG9xOrjzDfK+klh4PgUeGBhv97NqnT9rDzf1c2jNLZDt9vAJeG/3Oe/r2lSOJ6sR6Gw1LO9p+d4F7wGfgi1GnLbyXpdw1rifALUs7/cx+z4DnwIucfeUhZFyo7zLwHvgAfFxBfSGgvus0x5dIq6s+xkvMKzC2VwhcR7OqkyfH8FXJ//C4RlptdUdVJ15iXoGxfYjAddRUnTy5TfVi+SrXdxu4o1LfzDMfGE+PRmREpfP6FJjOqSsEvddm+V+CvqPn9S3wLoIOm4/59hDc38xvK/QdfpwBzgLngPPABbU0x+hh9KrlawP9RecEpr6QPUTyeT2/+jD18dxogOkbVMvXRknZ10Gi/HuI5BN6fvn64Pr5d1KZNNq+B0qW52U2N3Ns7KPKnWOgba6S3cz1oX1Bj9v1zavXu0tfmbS1VPpPgecgUv1aOq1R1odPX8s4+3IftI3ODe5bbKIJiW0jBcdn2hoJzQ20bbLuUXlpETw3eBCgL28+lRWMW+ifuGb18dKoc1rQ5/IBG2bcDaFJ+qaZvk+Wun3AGk97FU95XvvhmpVyK9R0iNjk0adjNmrk+4205+p91ufHaD9c3+hzZm7VR5pWMzYDWyxt6ZiN+VbIPou2aSs5Lh9k1zg+9LmLzIZHBG3IbmCPRd+oSvc86d+rea19yxf/cKza57gNdwKHgV0B2rgNUV+ilv5vla7LAdrKNCZXudbp0xabWTonKuy7I2afITRV6n++745YNAPr8XFMke3GCvS7oYvjqEWy3Yku2TwBrpD9flowc3jpXgnlvF5duLe1aZbdAG46xmDm8NJ9XSjn9aT/vGYbtrL/8BETLw==
+  </data>
+ </layer>
+ <layer name="foreground" width="40" height="50">
+  <data encoding="base64" compression="zlib">
+   eJzt1ssJgDAQBcC0YBEWa9KDtqoHLwpREfKDGdhLDuFBCPtCYHRT6wAv5sx5qpqCP7wRAPQlHrO0DpGRzllbB4EK9GTuYusAH5XeIVvh+4Erfw4A6NFTRxmlv+y1LQgu
+  </data>
+ </layer>
+</map>
